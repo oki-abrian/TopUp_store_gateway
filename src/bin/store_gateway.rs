@@ -2582,9 +2582,12 @@ async fn start_web_callback_listener(db: sqlx::MySqlPool) {
         .or_else(|_| std::env::var("TELEGRAM_BOT_SENDER_TOKEN"))
         .or_else(|_| std::env::var("TELEGRAM_BOT_2_TOKEN"))
         .unwrap_or_default();
-    let group_id = std::env::var("TELEGRAM_GROUP_2_ID").unwrap_or_default();
+    let chat_id = std::env::var("TELEGRAM_ADMIN_CHAT_ID")
+        .or_else(|_| std::env::var("TELEGRAM_CHAT_ID"))
+        .or_else(|_| std::env::var("TELEGRAM_GROUP_2_ID"))
+        .unwrap_or_default();
 
-    if bot_token.is_empty() || group_id.is_empty() {
+    if bot_token.is_empty() || chat_id.is_empty() {
         tracing::warn!("[WEB CALLBACK LISTENER] Telegram bot credentials missing. Background status callback listener skipped.");
         return;
     }
@@ -2596,9 +2599,9 @@ async fn start_web_callback_listener(db: sqlx::MySqlPool) {
 
         teloxide::repl(bot, move |_bot: Bot, msg: Message| {
             let db = db.clone();
-            let expected_group = group_id.clone();
+            let expected_chat_id = chat_id.clone();
             async move {
-                if msg.chat.id.to_string() != expected_group {
+                if msg.chat.id.to_string() != expected_chat_id {
                     return Ok(());
                 }
                 if let Some(text) = msg.text() {

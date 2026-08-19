@@ -38,8 +38,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // START TELEGRAM BOTS
     let bot_1_token = env::var("TELEGRAM_BOT_1_TOKEN").unwrap_or_default();
     let group_1_id = env::var("TELEGRAM_GROUP_1_ID").unwrap_or_default();
-    let bot_2_token = env::var("TELEGRAM_BOT_2_TOKEN").unwrap_or_default();
-    let group_2_id = env::var("TELEGRAM_GROUP_2_ID").unwrap_or_default();
+    let bot_2_token = env::var("TELEGRAM_BOT_2_TOKEN")
+        .or_else(|_| env::var("TELEGRAM_BOT_TOKEN"))
+        .unwrap_or_default();
+    let group_2_id = env::var("TELEGRAM_ADMIN_CHAT_ID")
+        .or_else(|_| env::var("TELEGRAM_CHAT_ID"))
+        .or_else(|_| env::var("TELEGRAM_GROUP_2_ID"))
+        .unwrap_or_default();
 
     if !bot_1_token.is_empty() && !group_1_id.is_empty() {
         let db_pool_clone = db_pool.clone();
