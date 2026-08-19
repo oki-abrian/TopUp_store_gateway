@@ -59,8 +59,8 @@ pub async fn init_telegram_sender() -> Result<(), String> {
 }
 
 async fn start_telegram_batch_worker(mut rx: mpsc::UnboundedReceiver<String>) {
-    tracing::info!("[TELEGRAM BATCH SENDER] Starting 5-second queue worker...");
-    let mut interval = tokio::time::interval(Duration::from_secs(5));
+    tracing::info!("[TELEGRAM BATCH SENDER] Starting 6-second queue worker (max 10 cycles/min for Telegram limit safety)...");
+    let mut interval = tokio::time::interval(Duration::from_secs(6));
     let http_client = reqwest::Client::builder()
         .timeout(Duration::from_secs(10))
         .build()
@@ -99,18 +99,15 @@ async fn start_telegram_batch_worker(mut rx: mpsc::UnboundedReceiver<String>) {
             chunks.push(current_chunk);
         }
 
+        // Kirim menggunakan TELEGRAM_BOT_SENDER_TOKEN atau TELEGRAM_BOT_TOKEN atau TELEGRAM_BOT_2_TOKEN
         let bot_token = env::var("TELEGRAM_BOT_SENDER_TOKEN")
             .or_else(|_| env::var("TELEGRAM_BOT_TOKEN"))
             .or_else(|_| env::var("TELEGRAM_BOT_2_TOKEN"))
             .unwrap_or_default();
+        let group_id = env::var("TELEGRAM_GROUP_2_ID").unwrap_or_default();
 
-        let chat_id = env::var("TELEGRAM_ADMIN_CHAT_ID")
-            .or_else(|_| env::var("TELEGRAM_CHAT_ID"))
-            .or_else(|_| env::var("TELEGRAM_GROUP_2_ID"))
-            .unwrap_or_default();
-
-        if bot_token.is_empty() || chat_id.is_empty() {
-            tracing::warn!("[TELEGRAM BATCH SENDER] TELEGRAM_BOT_TOKEN or TELEGRAM_ADMIN_CHAT_ID is missing. Dropping batch.");
+        if bot_token.is_empty() || group_id.is_empty() {
+            tracing::warn!("[TELEGRAM BATCH SENDER] TELEGRAM_BOT_TOKEN or TELEGRAM_GROUP_2_ID is missing. Dropping batch.");
             continue;
         }
 
@@ -121,7 +118,7 @@ async fn start_telegram_batch_worker(mut rx: mpsc::UnboundedReceiver<String>) {
             let encrypted_message = encrypt_telegram_payload(&combined_text);
 
             let payload = serde_json::json!({
-                "chat_id": chat_id,
+                "chat_id": group_id,
                 "text": encrypted_message
             });
 
