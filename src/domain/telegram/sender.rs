@@ -113,7 +113,16 @@ async fn start_telegram_batch_worker(mut rx: mpsc::UnboundedReceiver<String>) {
 
         let url = format!("https://api.telegram.org/bot{}/sendMessage", bot_token);
 
+        let mut chunk_index = 0;
+        let total_chunks = chunks.len();
+
         for chunk in chunks {
+            if chunk_index > 0 {
+                // Beri jeda minimal 6 detik antar-chunk pengiriman agar tidak melebihi kuota Telegram
+                tokio::time::sleep(Duration::from_secs(6)).await;
+            }
+            chunk_index += 1;
+
             let combined_text = chunk.join("\n");
             let encrypted_message = encrypt_telegram_payload(&combined_text);
 
@@ -126,25 +135,55 @@ async fn start_telegram_batch_worker(mut rx: mpsc::UnboundedReceiver<String>) {
             for attempt in 1..=3 {
                 match http_client.post(&url).json(&payload).send().await {
                     Ok(resp) if resp.status().is_success() => {
-                        tracing::info!("[TELEGRAM BATCH SENDER] Successfully sent encrypted batch chunk of {} items to Telegram.", chunk.len());
+                        tracing::info!("[TELEGRAM BATCH SENDER] Successfully sent encrypted batch chunk of {} items to Telegram (chunk {}/{}).", chunk.len(), chunk_index, total_chunks);
                         sent_successfully = true;
                         break;
                     }
                     Ok(resp) => {
                         let status = resp.status();
                         let err_body = resp.text().await.unwrap_or_default();
-                        tracing::warn!("[TELEGRAM BATCH SENDER] Attempt {}/3 failed ({}): {}", attempt, status, err_body);
-                        tokio::time::sleep(Duration::from_millis(1000 * attempt)).await;
+
+                        // Parse parameter retry_after Telegram resmi jika terkena HTTP 429
+                        let retry_after_secs = if status.as_u16() == 429 {
+                            if let Ok(val) = serde_json::from_str::<serde_json::Value>(&err_body) {
+                                val.get("parameters")
+                                    .and_then(|p| p.get("retry_after"))
+                                    .and_then(|r| r.as_u64())
+                                    .unwrap_or(6)
+                            } else {
+                                6
+                            }
+                        } else {
+                            // Cycle-aligned backoff: kelipatan siklus aman Telegram (6s, 12s, 24s)
+                            6 * (1 << (attempt - 1))
+                        };
+
+                        tracing::warn!(
+                            "[TELEGRAM BATCH SENDER] Attempt {}/3 failed (Status: {}). Body: {}. Menunggu {} detik sebelum percobaan berikutnya...",
+                            attempt, status, err_body, retry_after_secs
+                        );
+                        tokio::time::sleep(Duration::from_secs(retry_after_secs)).await;
                     }
                     Err(e) => {
-                        tracing::warn!("[TELEGRAM BATCH SENDER] Attempt {}/3 network error: {}", attempt, e);
-                        tokio::time::sleep(Duration::from_millis(1000 * attempt)).await;
+                        let wait_secs = 6 * (1 << (attempt - 1)); // 6s, 12s, 24s
+                        tracing::warn!(
+                            "[TELEGRAM BATCH SENDER] Attempt {}/3 network/RTO error: {}. Menunggu {} detik sebelum percobaan berikutnya...",
+                            attempt, e, wait_secs
+                        );
+                        tokio::time::sleep(Duration::from_secs(wait_secs)).await;
                     }
                 }
             }
 
             if !sent_successfully {
-                tracing::error!("[TELEGRAM BATCH SENDER] CRITICAL: Failed to deliver batch chunk of {} items after 3 attempts.", chunk.len());
+                tracing::error!(
+                    "[TELEGRAM BATCH SENDER] CRITICAL: Gagal mengirim batch chunk {} item setelah 3 percobaan. Memasukkan kembali ke antrean memori (Zero Data Loss Re-queue).",
+                    chunk.len()
+                );
+                let queue = get_queue_sender();
+                for item in chunk {
+                    let _ = queue.send(item);
+                }
             }
         }
     }

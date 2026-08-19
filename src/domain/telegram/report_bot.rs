@@ -242,29 +242,36 @@ async fn process_single_command(
             let username = parts[2];
             let service_code = parts[3];
             let target_game = parts[4];
-            let provider = parts[5];
+            let mut provider = parts[5].to_string();
 
-            if !is_safe_string(order_id) || !is_safe_string(username) || !is_safe_string(service_code) || !is_safe_string(provider) {
+            if !is_safe_string(order_id) || !is_safe_string(username) || !is_safe_string(service_code) || !is_safe_string(&provider) {
                 tracing::warn!("[REPORT BOT] Blocked hack attempt! Unsafe characters in NEW_ORDER payload.");
                 return;
             }
 
-            let (real_price, service_name): (f64, String) = if parts.len() >= 8 {
-                let p: f64 = parts[6].parse().unwrap_or(0.0);
-                let n = parts[7].replace('_', " ");
-                (p, n)
-            } else if let Ok(Some(svc_row)) = sqlx::query("SELECT price, name FROM service WHERE code = ? LIMIT 1").bind(&service_code).fetch_optional(db_pool).await {
+            let (real_price, service_name, db_prov): (f64, String, Option<String>) = if let Ok(Some(svc_row)) = sqlx::query("SELECT price, name, provider FROM service WHERE code = ? LIMIT 1").bind(&service_code).fetch_optional(db_pool).await {
                 let p = svc_row.try_get("price").unwrap_or(0.0);
                 let n = svc_row.try_get("name").unwrap_or_default();
-                (p, n)
+                let prov: Option<String> = svc_row.try_get("provider").ok();
+                (p, n, prov)
+            } else if parts.len() >= 8 {
+                let p: f64 = parts[6].parse().unwrap_or(0.0);
+                let n = parts[7].replace('_', " ");
+                (p, n, None)
             } else {
-                (0.0, service_code.to_string())
+                (0.0, service_code.to_string(), None)
             };
+
+            if let Some(p) = db_prov {
+                if !p.is_empty() {
+                    provider = p;
+                }
+            }
 
             tracing::info!("[REPORT BOT] NEW_ORDER received: {} for {} (Price: {}, Provider: {})", order_id, username, real_price, provider);
 
             let _ = sqlx::query(
-                "INSERT INTO transaction (order_id, user, code, service_name, target, price, status, payment_status, provider, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, 'pending', 'unpaid', ?, NOW(), NOW()) ON DUPLICATE KEY UPDATE price = VALUES(price), service_name = VALUES(service_name), updated_at = NOW()"
+                "INSERT INTO transaction (order_id, user, code, service_name, target, price, status, payment_status, provider, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, 'pending', 'unpaid', ?, NOW(), NOW()) ON DUPLICATE KEY UPDATE price = VALUES(price), service_name = VALUES(service_name), provider = VALUES(provider), updated_at = NOW()"
             )
             .bind(order_id)
             .bind(username)
@@ -272,7 +279,7 @@ async fn process_single_command(
             .bind(&service_name)
             .bind(target_game)
             .bind(real_price)
-            .bind(provider)
+            .bind(&provider)
             .execute(db_pool)
             .await;
         }
@@ -405,7 +412,20 @@ async fn process_single_command(
         tracing::info!("[REPORT BOT] Processing report for Order ID: {}", order_id);
 
         let order_query = "SELECT order_id, provider, price FROM transaction WHERE order_id = ? AND (payment_status IN ('unpaid', 'pending') OR status = 'pending') LIMIT 1";
-        if let Ok(Some(row)) = sqlx::query(order_query).bind(order_id).fetch_optional(db_pool).await {
+        
+        let mut row_opt = None;
+        for attempt in 1..=3 {
+            if let Ok(Some(row)) = sqlx::query(order_query).bind(order_id).fetch_optional(db_pool).await {
+                row_opt = Some(row);
+                break;
+            }
+            if attempt < 3 {
+                // Jeda 1.5 detik jika webhook masuk bersamaan dengan pembuatan order (anti race-condition)
+                tokio::time::sleep(std::time::Duration::from_millis(1500)).await;
+            }
+        }
+
+        if let Some(row) = row_opt {
             let db_order_id: String = row.try_get("order_id").unwrap_or_default();
             let price: f64 = row.try_get("price").unwrap_or_default();
 
@@ -422,7 +442,7 @@ async fn process_single_command(
                 }
             }
         } else {
-            tracing::warn!("[REPORT BOT] Order {} not found or already processed.", order_id);
+            tracing::warn!("[REPORT BOT] Order {} not found or already processed after 3 lookup attempts.", order_id);
         }
     }
 }

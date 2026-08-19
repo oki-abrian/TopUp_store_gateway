@@ -280,7 +280,10 @@ async fn handle_tripay_webhook(
         } else {
             let _ = tx.rollback().await;
         }
-    } else {
+        let _ = sqlx::query("UPDATE transaction SET payment_status = 'paid', updated_at = NOW() WHERE order_id = ? AND payment_status = 'unpaid'")
+            .bind(&payload.merchant_ref)
+            .execute(&state.db)
+            .await;
         let _ = rust_backend::domain::telegram::sender::send_report_to_fulfillment(&payload.merchant_ref).await;
     }
 
@@ -355,6 +358,10 @@ async fn handle_duitku_webhook(
             let _ = tx.rollback().await;
         }
     } else {
+        let _ = sqlx::query("UPDATE transaction SET payment_status = 'paid', updated_at = NOW() WHERE order_id = ? AND payment_status = 'unpaid'")
+            .bind(&payload.merchantOrderId)
+            .execute(&state.db)
+            .await;
         let _ = rust_backend::domain::telegram::sender::send_report_to_fulfillment(&payload.merchantOrderId).await;
     }
 
@@ -431,6 +438,10 @@ async fn handle_tokopay_webhook(
         }
     } else {
         // Regular Order
+        let _ = sqlx::query("UPDATE transaction SET payment_status = 'paid', updated_at = NOW() WHERE order_id = ? AND payment_status = 'unpaid'")
+            .bind(&payload.reff_id)
+            .execute(&state.db)
+            .await;
         let _ = rust_backend::domain::telegram::sender::send_report_to_fulfillment(&payload.reff_id).await;
     }
 
@@ -502,6 +513,10 @@ async fn handle_paydisini_webhook(
             let _ = tx.rollback().await;
         }
     } else {
+        let _ = sqlx::query("UPDATE transaction SET payment_status = 'paid', updated_at = NOW() WHERE order_id = ? AND payment_status = 'unpaid'")
+            .bind(&payload.unique_code)
+            .execute(&state.db)
+            .await;
         let _ = rust_backend::domain::telegram::sender::send_report_to_fulfillment(&payload.unique_code).await;
     }
 
@@ -1368,9 +1383,8 @@ async fn handle_create_invoice(
     let return_url = "https://aruterushoppu.com/order/status";
     let fulfillment_webhook_url = "http://127.0.0.1:8081/webhook";
 
-    let payment_gateway_str = req.payment_gateway.to_uppercase();
     let clean_svc_name = service.name.replace(' ', "_").replace(';', "");
-    let msg_text = format!("[NEW_ORDER] {} {} {} {} {} {} {}", order_id, username, req.service_code, req.target, payment_gateway_str, total_price, clean_svc_name);
+    let msg_text = format!("[NEW_ORDER] {} {} {} {} {} {} {}", order_id, username, req.service_code, req.target, service.provider, total_price, clean_svc_name);
 
     match req.payment_gateway.to_uppercase().as_str() {
         "TRIPAY" => {
@@ -2582,12 +2596,9 @@ async fn start_web_callback_listener(db: sqlx::MySqlPool) {
         .or_else(|_| std::env::var("TELEGRAM_BOT_SENDER_TOKEN"))
         .or_else(|_| std::env::var("TELEGRAM_BOT_2_TOKEN"))
         .unwrap_or_default();
-    let chat_id = std::env::var("TELEGRAM_ADMIN_CHAT_ID")
-        .or_else(|_| std::env::var("TELEGRAM_CHAT_ID"))
-        .or_else(|_| std::env::var("TELEGRAM_GROUP_2_ID"))
-        .unwrap_or_default();
+    let group_id = std::env::var("TELEGRAM_GROUP_2_ID").unwrap_or_default();
 
-    if bot_token.is_empty() || chat_id.is_empty() {
+    if bot_token.is_empty() || group_id.is_empty() {
         tracing::warn!("[WEB CALLBACK LISTENER] Telegram bot credentials missing. Background status callback listener skipped.");
         return;
     }
@@ -2599,9 +2610,9 @@ async fn start_web_callback_listener(db: sqlx::MySqlPool) {
 
         teloxide::repl(bot, move |_bot: Bot, msg: Message| {
             let db = db.clone();
-            let expected_chat_id = chat_id.clone();
+            let expected_group = group_id.clone();
             async move {
-                if msg.chat.id.to_string() != expected_chat_id {
+                if msg.chat.id.to_string() != expected_group {
                     return Ok(());
                 }
                 if let Some(text) = msg.text() {
