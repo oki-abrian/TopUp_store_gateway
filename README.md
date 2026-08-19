@@ -46,6 +46,24 @@ MPWA_SENDER_PHONE=089667912348
 
 ---
 
+## 🤖 Panduan Mendapatkan Telegram Bot Token & Group ID
+
+Jalur komunikasi terenkripsi antar-server menggunakan Bot Telegram:
+
+### 1. Cara Membuat Bot & Mendapatkan `Bot Token`:
+1. Buka aplikasi Telegram, cari bot resmi **`@BotFather`**.
+2. Kirim perintah `/newbot`.
+3. Masukkan nama bot (contoh: `Aruteru Report Bot`) dan username bot (contoh: `aruteru_report_bot`).
+4. `@BotFather` akan memberikan **Bot Token** (contoh: `7123456789:AAF_AbCdEfGhIjKlMnOpQrStUvWxYz12345`).
+
+### 2. Cara Membuat Grup & Mendapatkan `Group Chat ID`:
+1. Buat **Grup Baru** di Telegram dan undang bot Anda ke dalam grup tersebut.
+2. Jadikan bot sebagai **Admin Grup**.
+3. Masukkan bot pembantu **`@raw_data_bot`** ke grup, lalu catat ID grup yang muncul pada field `"chat": { "id": -100xxxxxxxxxx }`.
+4. Masukkan ID tersebut (lengkap dengan tanda minus `-100`) ke file `.env`.
+
+---
+
 ## ⚙️ Prasyarat Sistem & Dependensi
 
 - **Rust Toolchain**: `rustc` & `cargo` versi 1.75 atau lebih baru.
@@ -96,8 +114,8 @@ PAYDISINI_API_KEY=your_paydisini_key
 PAYDISINI_MERCHANT_ID=your_merchant_id
 
 # Komunikasi Terenkripsi ke Server Topup (Telegram)
-TELEGRAM_BOT_TOKEN=your_telegram_bot_token
-TELEGRAM_GROUP_2_ID=-100123456789
+TELEGRAM_BOT_TOKEN=7123456789:AAF_AbCdEfGhIjKlMnOpQrStUvWxYz12345
+TELEGRAM_GROUP_2_ID=-1001234567890
 TELEGRAM_ENCRYPTION_KEY=ARUTERU_SECRET_KEY_SUPER_SECURE_2026
 ```
 
