@@ -1,0 +1,120 @@
+/*
+.---------------------------------------------------------------------------.
+|    Script: Low Part Mobile Responsive                                     |
+|   Version: 1.0                                                            |
+|   Release: August 05, 2020 (14:30 WIB)                                    |
+|    Update: August 29, 2020 (08:00 WIB)                                    |
+|                                                                           |
+|                     Pasal 57 ayat (1) UU 28 Tahun 2014                    |
+|      Copyright © 2020, Safalian Novandika S.Kom. All Rights Reserved.     |
+| ------------------------------------------------------------------------- |
+| Hubungi Saya:                                                             |
+| - Facebook    - https://www.facebook.com/safalian.novandika               |
+| - Instagram   - https://www.instagram.com/safalian_nd/                    |
+| - Telegram    - https://t.me/safalian                                     |
+| - WhatsApp    - 0838 5613 9500 / 0851 5626 9150                           |
+'---------------------------------------------------------------------------'
+*/
+/*FOOTER START*/
+#footer-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 98;
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    backdrop-filter: saturate(180%) blur(20px);
+    background-color: rgba(255,255,255,.7);
+    display: flex;
+    min-height: 61px;
+    border-top: solid 1px rgba(0,0,0,.05);
+    text-align: center;
+    transition: transform 350ms ease!important;
+}
+.footer-bar-6 {
+    margin-left: -3px;
+}
+.footer-bar-6 .active-nav em {
+    position: absolute;
+    width: 60px;
+    height: 4px;
+    border-radius: 60px;
+    left: 50%;
+    top: 57px;
+    transform: translateX(-50%);
+    background-image: linear-gradient(to bottom,#1b55bf 0,#1740bf 100%)!important;
+}
+#footer-bar a span {
+    position: relative;
+    z-index: 2;
+    display: block;
+    font-size: 10px;
+    font-weight: 500;
+    margin-top: -6px;
+    opacity: .7;
+    font-family: Roboto,sans-serif!important;
+}
+.footer-bar-6 span {
+    font-size: 11px!important;
+}
+.footer-bar-6 .circle-nav i {
+    transform: translateY(-21px) translateX(0);
+    color: #fff!important;
+    opacity: 1!important;
+    font-size: 20px!important;
+    position: relative;
+    z-index: 2;
+}
+.footer-bar-6 .circle-nav strong {
+    position: absolute;
+    width: 50px;
+    height: 50px;
+    border-radius: 50px;
+    left: 50%;
+    top: -23px;
+    z-index: 0;
+    transform: translateX(-50%);
+    box-shadow: 0 5px 15px 0 rgba(0,0,0,.09);
+    animation: footerAni 1s infinite;
+    background-image: linear-gradient(to bottom,#7367F0 0,#1740bf 100%)!important;
+}
+.footer-bar-6 .circle-nav u {
+    position: absolute;
+    left: 0;
+    right: 0;
+    width: 50px;
+    border-radius: 50px;
+    height: 50px;
+    z-index: 0;
+}
+.footer-bar-6 u {
+    background-color: rgba(255,255,255,.2);
+}
+#footer-bar a {
+    color: #1f1f1f;
+    padding-top: 12px;
+    position: relative;
+    flex: 1 1 auto;
+}
+a {
+    text-decoration: none!important;
+}
+a:-webkit-any-link {
+    color: -webkit-link;
+    cursor: pointer;
+    text-decoration: underline;
+}
+#footer-bar a i {
+    font-size: 18px;
+    position: relative;
+    z-index: 2;
+}
+.footer-bar-6 i {
+    transform: translateY(-2px);
+    opacity: .7;
+}
+/*FOOTER END*/
+
+/*ACTION SHEET START*/
+
+/*ACTION SHEET END*/

@@ -1,0 +1,197 @@
+@keyframes float {
+    0% {
+        transform: translateY(0) rotate(0deg);
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(-1000px) rotate(720deg);
+        opacity: 0;
+    }
+}
+
+.area {
+    width: 100%;
+    height: 100vh;
+    position: absolute;
+    animation: gradientBG 15s ease infinite;
+}
+
+.circles {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+@keyframes gradientBG {
+    0% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+.bg-masjid {
+    background-size: contain;
+    background-repeat: repeat-x;
+    background-position: bottom;
+}
+
+@keyframes lampFloat {
+    0%, 100% {
+        transform: translateY(0) scale(1);
+    }
+    50% {
+        transform: translateY(-10px) scale(1.02);
+    }
+}
+
+.left-hanger, .right-hanger {
+    animation: lampFloat 4s ease-in-out infinite;
+    transition: all 0.3s ease;
+}
+
+/* Styling untuk gambar hanger */
+.hanger-image {
+    height: 120px; /* Default untuk mobile */
+    transition: all 0.5s ease;
+    transform-origin: top center;
+}
+
+.left-hanger {
+    animation: lampFloatLeft 4s ease-in-out infinite;
+}
+
+.right-hanger {
+    animation: lampFloatRight 4s ease-in-out infinite;
+    animation-delay: 0.5s; /* Sedikit delay agar tidak bersamaan */
+}
+
+/* Animasi mengambang untuk left-hanger */
+@keyframes lampFloatLeft {
+    0%, 100% {
+        transform: translateY(0) rotate(-2deg);
+    }
+    50% {
+        transform: translateY(-15px) rotate(2deg);
+    }
+}
+
+/* Animasi mengambang untuk right-hanger */
+@keyframes lampFloatRight {
+    0%, 100% {
+        transform: translateY(0) rotate(2deg);
+    }
+    50% {
+        transform: translateY(-15px) rotate(-2deg);
+    }
+}
+
+/* Responsive breakpoints */
+@media (min-width: 768px) {
+    .hanger-image {
+        height: 200px; /* Ukuran untuk tablet */
+    }
+}
+
+@media (min-width: 1024px) {
+    .hanger-image {
+        height: 300px; /* Ukuran untuk desktop */
+    }
+}
+
+/* Hover effect */
+.hanger-image:hover {
+    filter: brightness(1.1);
+    transform: scale(1.05);
+}
+
+/* Add after the existing styles */
+.neon-line {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 50px;
+    background: linear-gradient(
+        to right,
+        transparent,
+        rgba(255, 0, 0, 0.3),
+        rgba(0, 255, 255, 0.3),
+        rgba(0, 191, 255, 0.3),
+        rgba(0, 127, 255, 0.3),
+        rgba(0, 255, 255, 0.3),
+        rgba(0, 191, 255, 0.3),
+        rgba(0, 127, 255, 0.3),
+        rgba(0, 255, 255, 0.3),
+        transparent
+    );
+    background-size: 200% 100%;
+    animation: neonMove 12s ease-in-out infinite, waveFloat 3s ease-in-out infinite;
+    box-shadow: 
+        0 0 30px rgba(0, 255, 255, 0.3),
+        0 0 50px rgba(0, 191, 255, 0.2),
+        0 0 70px rgba(0, 127, 255, 0.1);
+    z-index: 1;
+    opacity: 0.8;
+    filter: blur(12px);
+    transform-origin: center;
+    pointer-events: none;
+}
+
+/* Tambahkan layer kedua untuk efek wave yang lebih kuat */
+.neon-line::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: inherit;
+    filter: blur(20px);
+    opacity: 0.5;
+    animation: waveEffect 4s ease-in-out infinite;
+    transform-origin: center;
+}
+
+@keyframes neonMove {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+@keyframes waveFloat {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(8px);
+    }
+}
+
+@keyframes waveEffect {
+    0% {
+        transform: scaleY(1) translateY(0);
+    }
+    25% {
+        transform: scaleY(1.2) translateY(-5px);
+    }
+    50% {
+        transform: scaleY(1) translateY(0);
+    }
+    75% {
+        transform: scaleY(0.8) translateY(5px);
+    }
+    100% {
+        transform: scaleY(1) translateY(0);
+    }
+} 

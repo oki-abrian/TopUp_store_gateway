@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="dark">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0, minimal-ui">
+    <meta content="Aruteru Shoppu Top Up Game" name="description">
+    <meta content="Top up game murah" name="keyword">
+    <meta name="author" content="Sahabat Store x DhaMus">
+        
+    <title>Aruteru Shoppu</title>
+    <link rel="shortcut icon" href="/imagehome/Footeraru.png">
+    
+    <meta property="og:title" content="Aruteru Shoppu">
+    <meta property="og:type" content="website">
+    <meta property="og:description" content="Aruteru Shoppu Top Up Game Murah dan Terpercaya">
+    <meta property="og:site_name" content="Aruteru Shoppu">
+    <meta property="og:locale" content="id_ID">
+    <meta property="twitter:card" content="summary">
+    <meta property="twitter:title" content="Aruteru Shoppu">
+    <meta name="apple-mobile-web-app-title" content="Aruteru Shoppu">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="Rating" content="General">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="/library/assets/guest/css/e00de8768e0e97d0dsddd0b0.css">
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/placeholder-loading/dist/css/placeholder-loading.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+        
+    <link rel="stylesheet" href="/library/assets/guest/css/header.css">
+    <link rel="stylesheet" href="/library/assets/guest/css/mobile-menu.css">
+    <link rel="stylesheet" href="/library/assets/guest/css/e00de8768e0e97d0dsddd0bb.css">    
+    <link rel="stylesheet" href="/library/assets/guest/css/app.css">
+    <link rel="stylesheet" href="/library/assets/guest/css/home.css">
+    <link rel="stylesheet" href="/library/assets/guest/css/order.css">
+    <link rel="stylesheet" href="/library/assets/guest/css/popular-product.css">
+    <link rel="stylesheet" href="/library/assets/guest/css/footer.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        murky: {
+                            200: '#e2e8f0',
+                            300: '#cbd5e1',
+                            400: '#94a3b8',
+                            500: '#64748b',
+                            600: '#475569',
+                            700: '#334155',
+                            800: '#1e293b',
+                            900: '#0f172a',
+                        },
+                        'dark-new3': '#182232',
+                        melpa: {
+                            100: '#1e293b',
+                        },
+                        primary: {
+                            400: '#818cf8',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+      <style>
+        :root {
+            --warna_1: #1e293b;
+            --warna_2: #0f172a;
+            --warna_3: #6366f1;
+            --warna_4: #334155;
+            --primary-500: #6366f1;
+            --murky-700-hover: #334155;
+        }
+        
+        /* Light theme colors */
+        :root[data-theme="light"] {
+            --warna_1: #ffffff;
+            --warna_2: #f8f9fa;
+            --warna_3: #007bff;
+            --warna_4: #e9ecef;
+            --primary-500: #007bff;
+            --murky-700-hover: #dee2e6;
+            --text-color: #343a40;
+            --bg-color: #ffffff;
+        }        /* Dark theme colors - using the configured colors */
+        :root[data-theme="dark"] {
+            --warna_1: #1e293b;
+            --warna_2: #0f172a;
+            --warna_3: #6366f1;
+            --warna_4: #334155;
+            --primary-500: #007bff;
+            --murky-700-hover: #334155;
+            --text-color: #ffffff;
+            --menu-text: #ffffff;
+            --bg-color: #0f172a;
+        }        /* Theme-specific menu text styles */
+        [data-theme="dark"] .desktop-nav-link {
+            color:rgb(255, 255, 255);
+            font-weight: 500;
+            text-shadow: none;
+        }
+
+        [data-theme="dark"] .mobile-nav-link {
+            color: var(--menu-text);
+            font-weight: 600;
+            text-shadow: 0 0 1px rgba(255, 255, 255, 0.3);
+        }
+
+        [data-theme="light"] .desktop-nav-link,
+        [data-theme="light"] .mobile-nav-link {
+            color: #000000;
+            font-weight: 600;
+        }
+
+        .iconly svg g {
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }
+        
+        .iconly:hover svg g:nth-child(1) {
+            transform: translateY(-2px);
+        }
+        
+        .iconly:hover svg g:nth-child(2) {
+            opacity: 0.8;
+            transform: scale(1.1);
+        }
+        
+        .iconly:hover svg g:nth-child(3) {
+            opacity: 1;
+            transform: translateY(2px);
+        }
+        
+        .iconly:active svg g {
+            transform: scale(0.95);
+        }
+
+        .mobile-nav-link:hover .iconly svg g path,
+        .desktop-nav-link:hover .iconly svg g path {
+            stroke: var(--warna_3);
+        }
+
+        .mobile-nav-link.active .iconly svg g path,
+        .desktop-nav-link.active .iconly svg g path {
+            stroke: var(--warna_3);
+        }
+
+        .iconly {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .iconly svg {
+            width: var(--size);
+            height: var(--size);
+        }
+
+        .iconly svg path {
+            transition: transform 0.3s ease;
+            stroke: currentColor;
+        }
+
+        .desktop-nav-link:hover,
+        .mobile-nav-link:hover {
+            color: white;
+        }
+
+        .desktop-nav-link:hover .iconly path,
+        .mobile-nav-link:hover .iconly path {
+            stroke: currentColor;
+        }
+
+        .mobile-nav-link.active .iconly path,
+        .desktop-nav-link.active .iconly path {
+            stroke: currentColor;
+        }
+
+        .mobile-nav-link:active .iconly svg,
+        .desktop-nav-link:active .iconly svg {
+            transform: scale(0.95);
+        }
+
+        .desktop-nav-link,
+        .mobile-nav-link {
+            font-size: 12px;
+            padding: 0.3rem 0.4rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            color: white;
+            font-weight: 500;
+        }
+
+        .desktop-nav-link.active {
+            color: white;
+        }
+
+        .desktop-nav-link .iconly {
+            --size: 14px;
+            width: var(--size);
+            height: var(--size);
+        }
+
+        .desktop-nav-link .iconly path {
+            stroke-width: 2.5;
+        }
+
+        [data-theme="dark"] .desktop-nav-link {
+            color: white;
+            font-weight: 500;
+        }
+
+        [data-theme="light"] .desktop-nav-link {
+            color: #000000;
+            font-weight: 500;
+        }
+
+        [data-theme="dark"] .desktop-nav-link .iconly svg path {
+            stroke: rgb(255, 255, 255);
+        }
+
+        [data-theme="dark"] .desktop-nav-link.active .iconly svg path,
+        [data-theme="dark"] .desktop-nav-link:hover .iconly svg path {
+            stroke: #007bff;
+        }
+
+        [data-theme="dark"] .mobile-nav-link .iconly svg path {
+            stroke: rgb(255, 255, 255);
+        }
+
+        [data-theme="dark"] .mobile-nav-link.active .iconly svg path,
+        [data-theme="dark"] .mobile-nav-link:hover .iconly svg path {
+            stroke: #007bff;
+        }
+
+        [data-theme="dark"] .desktop-nav-link .iconly svg g path.main-path {
+            stroke: rgb(255, 255, 255);
+            stroke-opacity: 1;
+        }
+
+        [data-theme="dark"] .desktop-nav-link .iconly svg g path.secondary-path {
+            stroke: rgb(255, 255, 255);
+            stroke-opacity: 0.6;
+        }
+
+        [data-theme="dark"] .desktop-nav-link .iconly svg g path.tertiary-path {
+            stroke: rgb(255, 255, 255);
+            stroke-opacity: 0.4;
+        }
+
+        [data-theme="dark"] .desktop-nav-link.active .iconly svg g path,
+        [data-theme="dark"] .desktop-nav-link:hover .iconly svg g path {
+            stroke: #007bff;
+            stroke-opacity: 1;
+        }
+
+        [data-theme="dark"] .desktop-nav-link span,
+        [data-theme="dark"] .mobile-nav-link span {
+            color: rgb(255, 255, 255);
+        }
+
+        [data-theme="dark"] .desktop-nav-link.active span,
+        [data-theme="dark"] .desktop-nav-link:hover span {
+            color: #007bff;
+        }
+        
+        /* Animasi Dasar */
+        @keyframes pulse {
+            0% { opacity: 0.6; }
+            100% { opacity: 1; }
+        }
+
+        @keyframes sakuraFall {
+            0% { transform: translate(0, -10px) rotate(0deg); opacity: 0; }
+            50% { opacity: 0.8; }
+            100% { transform: translate(10px, 10px) rotate(360deg); opacity: 0; }
+        }
+
+        @keyframes floatAnimation {
+            0% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+            100% { transform: translateY(0); }
+        }
+
+        @keyframes shineEffect {
+            0% { transform: translateX(-100%) rotate(-25deg); }
+            100% { transform: translateX(100%) rotate(-25deg); }
+        }
+
+        /* Stil Komponen */
+        .skeleton-berita {
+            min-height: 180px;
+            border-radius: 14px;
+            overflow: hidden;
+            background-color: rgba(74, 81, 87, 1);
+            animation: pulse 1.5s infinite alternate;
+        }
+
+        .category-shadow-bg {
+            position: relative;
+            animation: floatAnimation 3s ease-in-out infinite;
+        }
+
+        .category-shadow-bg:hover {
+            transform: translateY(-8px);
+        }
+
+        .category-shadow-bg::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: inherit;
+            background-size: cover;
+            background-position: center;
+            filter: blur(8px);
+            opacity: 0.3;
+            z-index: -1;
+            transition: all 0.3s ease;
+        }
+
+        .category-shadow-bg:hover::before {
+            opacity: 0.5;
+            filter: blur(12px);
+        }
+
+        .category-shadow-bg::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(45deg, 
+                rgba(255,255,255,0) 0%,
+                rgba(255,255,255,0.1) 50%,
+                rgba(255,255,255,0) 100%);
+            z-index: 1;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .category-shadow-bg:hover::after {
+            opacity: 1;
+            animation: shineEffect 2s infinite;
+        }
+
+        .featured-game-card {
+            position: relative;
+            transition: transform 0.3s ease;
+            animation: floatAnimation 3s ease-in-out infinite;
+        }
+
+        .featured-game-card::before {
+            content: '🌸';
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            font-size: 20px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+
+        .featured-game-card:hover::before {
+            opacity: 1;
+            animation: sakuraFall 3s ease-in-out infinite;
+        }
+
+        .featured-game-card .blur-sharp img {
+            transition: all 0.5s ease;
+        }
+
+        .featured-game-card:hover .blur-sharp img {
+            transform: scale(1.05);
+        }
+
+        .bg-title-product::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg width='20' height='20' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M10 0L20 10L10 20L0 10z'/%3E%3C/g%3E%3C/svg%3E");
+            opacity: 0.1;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .tab-button {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .tab-button::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            width: 0;
+            height: 2px;
+            background: currentColor;
+            transition: all 0.3s ease;
+            transform: translateX(-50%);
+        }
+
+        .tab-button:hover::after {
+            width: 80%;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+                scroll-behavior: auto !important;
+            }
+        }
+    </style>
+    <script>
+        var base_url = '/',
+            csrf_key = '',
+            ajax_message = {
+                "loading": {"select": "<option selected disabled>Loading...</option>"},
+                "error": {"select": "<option selected disabled>There is an error.</option>"}
+            },
+            error_result = 'There is an error!',
+            require_location_access = 'false';
+    </script>
+    <script defer src="//cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="/assets/js/app-data.js"></script>
+    <script src="/assets/js/layout.js"></script>
+</head>    
+
+<body class="text-white antialiased bg-[#0f172a]" :class="{ 'overflow-hidden': isSearchModalOpen }" x-data="appData()" x-init="initApp()" x-on:keydown.escape="isSearchModalOpen=false" data-created="Sahabat Store x DhaMus" data-aruteru-layout>
+    <div id="site-header"></div>
+
+    <main class="relative">
+        <div id="app">
+
+            <!-- Hero Section -->
+            <section id="hero" class="relative mb-4 bg-transparent py-6 shadow-2xl overflow-hidden min-h-[260px] md:min-h-[380px] flex items-center">
+                <div class="absolute inset-0 bg-[#123746]">
+                    <img alt="background" class="absolute inset-0 w-full h-full object-cover bg-repeat-x" src="https://aruterushoppu.com/imagehome/Background-Aruteru-Shoppu.webp" />
+                </div>
+
+                <div class="hero-swiper swiper container relative z-10 w-full">
+                    <div id="heroo" class="swiper-wrapper">
+                        <!-- Swiper items loaded via JS/Alpine if needed, or default static -->
+                        <template x-for="banner in banners" :key="banner.id">
+                            <div class="swiper-slide">
+                                <img :src="banner.content" class="w-full h-auto max-h-[320px] object-cover rounded-3xl shadow-xl">
+                            </div>
+                        </template>
+                    </div>
+                    <div class="swiper-pagination"></div>
+                    <div class="hidden items-center justify-end space-x-2 md:flex">
+                        <button type="button" class="swiper-button swiper-button-prev ml-5">
+                            <div class="whitespace-nowrap rounded-lg px-4 py-2 text-sm font-semibold outline-none duration-300 focus:bg-primary focus-visible:bg-primary bg-primary text-primary-foreground hover:bg-primary/75 flex items-center justify-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" class="!h-8 !w-8">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5"></path>
+                                </svg>
+                            </div>
+                        </button>
+                        <button type="button" class="swiper-button swiper-button-next ml-5">
+                            <div class="whitespace-nowrap rounded-lg px-4 py-2 text-sm font-semibold outline-none duration-300 focus:bg-primary focus-visible:bg-primary bg-primary text-primary-foreground hover:bg-primary/75 flex items-center justify-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" class="!h-8 !w-8">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"></path>
+                                </svg>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="absolute inset-0 -z-10">
+                    <div class="area bg-gradient-to-br from-purple-900/30 via-blue-900/30 to-pink-900/30">
+                        <ul class="circles" id="bubbles-container">
+                            <!-- Injected by JS to simulate the 15 bubbles -->
+                        </ul>
+                        <!-- Meteor effects (12) injected by JS -->
+                        <div id="meteors-container"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Flashsale Section -->
+            <section id="flashsale" x-show="flashsales.length > 0" x-cloak>
+                <div class="container">
+                    <div class="rounded-2xl bg-muted/50">
+                        <div class="px-4 pb-3 pt-4">
+                            <h3 class="flex items-center space-x-4 text-foreground">
+                                <div class="text-md font-bold uppercase leading-relaxed tracking-wider flex items-center">
+                                    <img src="https://media4.giphy.com/media/mGPBGPFdnIn8M8I9lU/giphy.gif?cid=6c09b952yyzb6z3y8unu0b0lr7hegaowsir1gv2efznmc3ml&ep=v1_stickers_search&rid=giphy.gif" alt="sparkle" class="w-6 h-6 mr-2" />
+                                    FLASHSALE
+                                </div>
+                                <div class="flex items-center gap-1 text-sm capitalize">
+                                    <div class="fs-countdown ml-3">
+                                        <div class="time" id="hours">00</div>
+                                        <div class="separator">:</div>
+                                        <div class="time" id="minutes">00</div>
+                                        <div class="separator">:</div>
+                                        <div class="time" id="seconds">00</div>
+                                    </div>
+                                </div>
+                            </h3>
+                            <p class="pl-6 text-xs text-foreground mb-2">
+                                Pesan sekarang! Persediaan terbatas.
+                            </p>
+                        </div>
+                        <div class="relative flex h-full w-full flex-col items-center justify-center overflow-hidden pb-2 pt-1">
+                            <div class="group flex overflow-hidden p-2 [--gap:1rem] [gap:var(--gap)] flex-row container [--duration:20s]">
+                                <div
+                                    data-run-marquee="true"
+                                    data-run-marquee-vertical="false"
+                                    class="flex shrink-0 justify-around [gap:var(--gap)] data-[run-marquee-vertical=true]:animate-marquee-vertical data-[run-marquee=true]:animate-marquee data-[run-marquee]:flex-row data-[run-marquee-vertical=true]:flex-col group-hover:[animation-play-state:paused]"
+                                >
+                                    <div class="assdafsdvsvasgdsgsdgwgreragwgwrgeargwrgergegsvdsDVSVcsdvdszvsbwtergerg43t34f34343ff34g34gG2">
+                                        <div id="special_deals">
+                                            <div class="list swiper-wrapper marquee-content">
+                                            <template x-for="fs in flashsales" :key="fs.id">
+                                                <a class="relative w-[265px] cursor-pointer bg-flash-nvd rounded-xl p-4 border-murky-800/75" :href="`/product/${fs.category_type}/category/${fs.category_slug}`" style="background-size: cover; backdrop-filter: blur(5px); background-color: rgba(0, 0, 0, 0.5);">
+                                                    <div class="flex flex-row items-center w-auto gap-3">
+                                                        <img alt="" loading="lazy" width="50" height="50" decoding="async" data-nimg="1" class="rounded-lg bg-muted aspect-[4/6] object-cover object-center flex-none" :src="fs.category_image" style="color: transparent;">
+                                                        <div class="flex-1 flex-col space-y-1">
+                                                            <div class="text-xs font-medium text-foreground" x-text="fs.category_name"></div>
+                                                            <figcaption class="flex items-center mt-3 text-sm font-semibold text-foreground">
+                                                                <img x-show="fs.service_image != ''" :src="fs.service_image" loading="lazy" width="18" height="18" decoding="async" data-nimg="1" style="margin-right:5px">
+                                                                <span x-text="fs.service_name"></span>
+                                                            </figcaption>
+                                                            <p class="text-xs font-semibold text-primary">
+                                                                Rp <span x-text="fs.show_price.toLocaleString('id-ID')"></span> ,-
+                                                            </p>
+                                                            <p class="text-xs font-semibold text-destructive line-through red-line-through">
+                                                                Rp <span x-text="fs.real_price.toLocaleString('id-ID')"></span> ,-
+                                                            </p>
+                                                            <div class="bg-[#f3f3f36c] w-100 rounded-l-3xl mt-2 rounded-r-lg relative flex-auto">
+                                                                <img src="https://media1.giphy.com/media/0zh3I8KOyH7SjWCB5f/giphy.gif" alt="fire" class="absolute z-10 bottom-1 h-5" style="top: -0.25rem; left: -0.25rem;">
+                                                                <div class="bar rounded-r-lg overflow-hidden" style="width: 100%;">
+                                                                    <div class="progress" style="width: 100%;"></div>
+                                                                    <span class="progress-text font-bold">Tersisa <i class="bi bi-infinity"></i></span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <img src="https://yuunastore.id/assets/gif/flashsalen.gif" alt="logo" class=" absolute right-0 object-cover z-20" style="top: -6px; height: 60%; width: 25%;">
+                                                </a>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+            <!-- App Section -->
+            <div class="flex flex-col gap-y-8 pb-8 pt-4 sm:p-0 md:pt-8">
+                <div id="content-melpa" class="container">
+                    
+                    <template x-if="popularGames.length > 0">
+                        <div class="mb-5">
+                            <h3 class="text-lg font-semibold text-primary-foreground flex items-center mb-2">
+                                <img src="https://i.imgur.com/0ygXhd0.gif" alt="trending" class="w-8 h-8 mr-2" />
+                                TRENDING!
+                            </h3>
+                            <p class="text-sm text-primary-foreground pl-8">
+                                Beberapa produk yang paling Trending saat ini.
+                            </p>
+                        </div>
+                    </template>
+                    
+                    <div class="grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-3 mt-3">
+                        <template x-for="game in popularGames" :key="game.id">
+                            <a tabindex="0" :href="`/product/${game.type}/category/${game.slug}`" style="outline: none;" class="kntl">
+                                <div class="bg-title-product flex items-center gap-x-1.5 rounded-xl bg-murky-600 p-1.5 duration-300 ease-in-out hover:shadow-2xl hover:ring-2 hover:ring-primary-500 hover:ring-offset-2 hover:ring-offset-murky-800 md:gap-x-3 md:rounded-2xl md:p-3">
+                                    <img :src="game.image" class="aspect-square h-14 w-14 rounded-lg !object-cover !object-center ring-1 ring-murky-600 md:h-20 md:w-20 md:rounded-xl lazy-image" x-init="setTimeout(() => $el.classList.remove('lazy-image'), 500)" alt="AT">
+                                    <div class="relative flex w-full flex-col">
+                                        <h2 class="w-[100px] truncate text-xxs font-semibold text-murky-200 sm:w-[200px] md:w-[275px] md:text-base" x-text="game.name"></h2>
+                                        <p class="text-xxs text-murky-300 md:text-sm" x-text="game.owner"></p>
+                                    </div>
+                                </div>
+                            </a>
+                        </template>
+                    </div>
+                </div>
+
+                <section id="mobile-game" class="relative w-full overflow-hidden pb-6 md:pb-8 lg:pb-10 bg-secondary-950 ">
+                    <div class="container mx-auto">
+                        <div class="flex items-center gap-2" x-show="tabs.length > 0">
+                            <div class="block lg:hidden" x-show="tabs.length > 2">
+                                <button id="scrollLeft" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-xs font-medium ring-offset-background bg-primary-x transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-card text-primary-foreground hover:bg-primary/90 h-9 w-9" type="button"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-left h-4 w-4"><path d="m15 18-6-6 6-6"></path></svg></button>
+                            </div>
+                            <div class="tabs-container flex overflow-x-auto scroll-smooth">
+                                <template x-for="tab in tabs" :key="tab.type">
+                                    <button
+                                        class="tab-button whitespace-nowrap rounded-lg border-secondary-600 px-4 py-2 text-sm text-text-color shadow-xl outline-none duration-300 hover:bg-secondary-500 focus:bg-secondary-500 focus-visible:bg-secondary-500 bg-primary"
+                                        :id="`headlessui-tabs-tab-:${tab.type}:`"
+                                        role="tab"
+                                        type="button"
+                                        :data-tabs-toggle="`#headlessui-tabs-panel-${tab.type}`"
+                                        :aria-controls="`headlessui-tabs-panel-:${tab.type}:`"
+                                        :class="{ 'active': activeTab === tab.type }"
+                                        :style="activeTab === tab.type ? 'background-color: var(--warna_3)' : 'background-color: var(--warna_1)'"
+                                        @click="activeTab = tab.type"
+                                    >
+                                        <i :class="tab.icon" style="font-size:13px; margin-right:6px;"></i><span x-text="tab.name"></span>
+                                    </button>
+                                </template>
+                            </div>
+                            <div class="block lg:hidden" x-show="tabs.length > 2">
+                                <button id="scrollRight" class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-xs font-medium bg-primary-x ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-card text-primary-foreground hover:bg-primary/90 h-9 w-9" type="button"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-right h-4 w-4"><path d="m9 18 6-6-6-6"></path></svg></button>
+                            </div>
+                        </div>
+                        
+                        <div class="my-8">
+                            <div :id="`headlessui-tabs-panel-${activeTab}`" role="tabpanel" data-tabs-content>
+                                <div class="games-container grid grid-cols-3 gap-4 sm:grid-cols-4 sm:gap-x-6 sm:gap-y-8 lg:grid-cols-5 xl:grid-cols-6" :data-category="activeTab" :id="activeTab === 'mobile-game' ? 'game' : ''">
+                                    <template x-for="category in (categories[activeTab] || [])" :key="category.id">
+                                        <div>
+                                            <!-- UI mode: category card (conf ui_category == true) -->
+                                            <a x-show="config.ui_category === true || config.ui_category === 'true'" :href="`/product/${category.type}/category/${category.slug}`">
+                                                <div class="group category-item relative overflow-hidden rounded-xl bg-muted transition-transform duration-300 ease-in-out hover:shadow-2xl hover:ring-2 hover:ring-primary-500 hover:ring-offset-2 hover:ring-offset-murky-900 category-shadow-bg" :style="`background-image: url('${category.image}');`">
+                                                    <div class="w-full aspect-square">
+                                                        <img alt="" fetchpriority="high" decoding="async" data-nimg="1" class="h-full w-full object-cover object-center" :src="category.image" style="color: transparent;">
+                                                    </div>
+                                                    <div class="bg-title-product py-2">
+                                                        <div class="flex flex-col px-3 py-1">
+                                                            <h2 class="truncate text-sm font-semibold text-foreground sm:text-base" x-text="category.name"></h2>
+                                                            <p class="truncate text-xxs text-foreground sm:text-xs" x-text="category.owner"></p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </a>
+                                            <!-- UI mode: featured game card (default) -->
+                                            <a x-show="config.ui_category !== true && config.ui_category !== 'true'" class="group relative transform overflow-hidden featured-game-card rounded-2xl bg-murky-700 duration-300 ease-in-out hover:shadow-2xl hover:ring-2 hover:ring-primary-500 hover:ring-offset-2 hover:ring-offset-murky-900 category-item" :href="`/product/${category.type}/category/${category.slug}`" style="outline: none;">
+                                                <div class="blur-sharp">
+                                                    <img fetchpriority="high" width="192" height="288" class="aspect-[4/6] object-cover object-center transition-all duration-300 ease-in-out group-hover:blur-lg group-hover:brightness-75 group-hover:saturate-150 group-hover:sepia" sizes="100vw" :src="category.image" style="color: transparent;" />
+                                                </div>
+                                                <article class="absolute inset-x-0 -bottom-10 z-10 flex transform flex-col px-3 transition-all duration-300 ease-in-out group-hover:bottom-3 sm:px-4 group-hover:sm:bottom-4">
+                                                    <h2 class="truncate text-sm font-semibold text-murky-200 sm:text-base" x-text="category.name"></h2>
+                                                    <p class="truncate text-xxs text-murky-400 sm:text-xs" x-text="category.owner"></p>
+                                                </article>
+                                                <div class="absolute inset-0 mdigital-item-container transform bg-gradient-to-t from-transparent transition-all duration-300 group-hover:from-murky-900">
+                                                </div>
+                                            </a>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                            <div class="text-center mt-3" x-show="(categories[activeTab] || []).length < (allCategories[activeTab] || []).length">
+                                <div class="justify-content-center">
+                                    <button @click="loadMore(activeTab)" class="inline-flex items-center justify-center nvdzoom rounded-md bg-primary-500 px-4 py-2 text-sm font-medium text-white duration-300 hover:bg-murky-800/75 disabled:cursor-not-allowed disabled:opacity-75 lg:border lg:border-murky-800/75 lg:bg-transparent lg:hover:bg-murky-800 button-more">Tampilkan Lainnya...</button>
+                                </div>
+                            </div>
+                        </div>                           
+                    </div>
+                </section>
+                
+                <section style="margin-top: 3rem">
+                    <div class="mx-auto max-w-screen-sm text-center mb-8">
+                        <h2 class="mb-4 text-2xl tracking-tight font-extrabold text-gray-900 dark:text-white">Berita Terkini</h2>
+                        <p class="font-light text-gray-200 sm:text-xl">Temukan penawaran eksklusif terbaru bersama kami! Dapatkan berita terhangat seputar game dan promo-promo menarik yang siap memanjakan penggemar game!</p>
+                    </div>
+                    <div class="grid gap-8 mb-6 lg:mb-16 md:grid-cols-3">
+                        <template x-for="item in news" :key="item.id">
+                            <div class="items-center bg-murky-500 rounded-lg shadow cursor-pointer" @click="location.href=`/blog/${item.slug}`">
+                                <img class="w-full rounded-t-lg" :src="item.banner">
+                                <div style="padding:15px">
+                                    <h3 class="text-xl font-bold tracking-tight text-gray-900 dark:text-white mb-1" x-text="item.title"></h3>
+                                    <span x-text="tryDecodeBase64(item.summary).slice(0,80)+'...'"></span>
+                                </div>
+                            </div>
+                        </template>
+                        <template x-if="news.length === 0">
+                            <div class="w-full flex gap-8">
+                                <div class="skeleton-berita rounded-lg shadow w-full"></div>
+                                <div class="skeleton-berita rounded-lg shadow w-full"></div>
+                                <div class="skeleton-berita rounded-lg shadow w-full"></div>
+                            </div>
+                        </template>
+                   </div>
+                </section>
+            </div>
+
+        </div>
+    </main>
+
+    <div id="site-footer"></div>
+
+    <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const bubblesContainer = document.getElementById('bubbles-container');
+            const colors = ['white', 'blue-200', 'purple-200', 'pink-200'];
+            for(let i=0; i<15; i++) {
+                const size = Math.floor(Math.random() * 60) + 20;
+                const duration = Math.floor(Math.random() * 12) + 8;
+                const delay = (Math.random() * 5).toFixed(3);
+                const left = Math.floor(Math.random() * 100);
+                const opacity = (Math.floor(Math.random() * 20) + 10) / 100;
+                const color = colors[Math.floor(Math.random() * colors.length)];
+                
+                const li = document.createElement('li');
+                li.className = `absolute rounded-full bg-${color}/${opacity*100} backdrop-blur-sm`;
+                li.style.cssText = `width: ${size}px; height: ${size}px; left: ${left}%; animation: float ${duration}s linear infinite; animation-delay: ${delay}s; bottom: -150px;`;
+                bubblesContainer.appendChild(li);
+            }
+        });
+
+        function appData() {
+            return {
+                ...layoutData(),
+                banners: [],
+                popularGames: [],
+                tabs: [],
+                categories: {},
+                allCategories: {},
+                activeTab: 'mobile-game',
+                news: [],
+                flashsales: [],
+                initApp() {
+                    fetch('/api/v1/page-data')
+                        .then(res => res.json())
+                        .then(data => {
+                            this.banners = (data.banners && data.banners.length > 0) ? data.banners : [
+                                { id: 1, content: 'https://aruterushoppu.com/imagehome/Background-Aruteru-Shoppu.webp' }
+                            ];
+                            this.popularGames = data.popularGames || [];
+                            this.tabs = data.tabs || [];
+                            if (this.tabs.length > 0) {
+                                this.activeTab = this.tabs[0].type;
+                            }
+                            this.categories = data.categories || {};
+                            this.allCategories = JSON.parse(JSON.stringify(this.categories));
+                            // Mirror PHP: show only first 12 categories per tab
+                            Object.keys(this.categories).forEach(key => {
+                                this.categories[key] = this.categories[key].slice(0, 12);
+                            });
+                            this.news = data.news || [];
+                            this.flashsales = data.flashsale || [];
+                            if (data.config) {
+                                this.config = data.config;
+                                applyConfigColors(this.config.colors);
+                            }
+                            if (data.config && data.config.popup) {
+                                this.popup = data.config.popup;
+                                const hidden = localStorage.getItem('hidePopupp') === 'true';
+                                if (this.popup.show && !hidden) {
+                                    this.$nextTick(() => { this.showPopup = true; });
+                                }
+                            }
+                            if (this.config.flashsale_time) {
+                                this.startFlashsaleTimer(this.config.flashsale_time);
+                            }
+
+                            this.$nextTick(() => {
+                                if (window.Swiper) {
+                                    new Swiper('.hero-swiper', {
+                                        loop: true,
+                                        autoplay: { delay: 4000, disableOnInteraction: false },
+                                        pagination: { el: '.swiper-pagination', clickable: true },
+                                        navigation: {
+                                            nextEl: '.swiper-button-next',
+                                            prevEl: '.swiper-button-prev',
+                                        },
+                                    });
+                                }
+                            });
+                        })
+                        .catch(err => console.error("Gagal memuat data web", err));
+                },
+                loadMore(type) {
+                    const current = (this.categories[type] || []).length;
+                    const all = this.allCategories[type] || [];
+                    this.categories[type] = all.slice(0, current + 12);
+                },
+                startFlashsaleTimer(countDownDate) {
+                    const target = new Date(countDownDate.replace(' ', 'T')).getTime();
+                    const hoursEl = document.getElementById('hours');
+                    const minutesEl = document.getElementById('minutes');
+                    const secondsEl = document.getElementById('seconds');
+                    if (!hoursEl || !minutesEl || !secondsEl) return;
+                    const tick = () => {
+                        const distance = target - new Date().getTime();
+                        if (distance > 0) {
+                            const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                            const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+                            hoursEl.textContent = hours.toString().padStart(2, '0');
+                            minutesEl.textContent = minutes.toString().padStart(2, '0');
+                            secondsEl.textContent = seconds.toString().padStart(2, '0');
+                        } else {
+                            clearInterval(this._fsTimer);
+                            hoursEl.textContent = '00';
+                            minutesEl.textContent = '00';
+                            secondsEl.textContent = '00';
+                            document.getElementById('expired_time_flash_sale').textContent = "Waktu sudah habis!";
+                        }
+                    };
+                    tick();
+                    this._fsTimer = setInterval(tick, 1000);
+                },
+                tryDecodeBase64(str) {
+                    if (!str) return '';
+                    try {
+                        return atob(str);
+                    } catch (e) {
+                        return str;
+                    }
+                }
+            }
+        }
+    </script>
+    <script>
+        function toggleCsOptions() {
+            const options = document.getElementById('cs-options');
+            if (options) {
+                options.classList.toggle('hidden');
+            }
+        }
+        document.addEventListener('click', function(event) {
+            const csOptions = document.getElementById('cs-options');
+            const csButton = event.target.closest('button');
+            if (csOptions && !csButton && !csOptions.contains(event.target)) {
+                csOptions.classList.add('hidden');
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Popup close logic (mirror popup.php)
+            const dontShow = document.getElementById('dontshowinfoo');
+            const popupStructure = document.querySelector('.popup-structuree');
+            const closeButtons = document.querySelectorAll('.close-popup-buttonn');
+            if (dontShow && popupStructure) {
+                function closePopup() {
+                    if (popupStructure) popupStructure.style.display = 'none';
+                    if (dontShow && dontShow.checked) localStorage.setItem('hidePopupp', 'true');
+                }
+                dontShow.addEventListener('change', function() {
+                    if (this.checked) closePopup();
+                });
+                closeButtons.forEach(btn => btn.addEventListener('click', closePopup));
+            }
+
+            // Meteor effects (mirror home.php 12 meteors)
+            const meteorsContainer = document.getElementById('meteors-container');
+            if (meteorsContainer) {
+                const colors = ['white', 'blue-200', 'purple-200', 'pink-200'];
+                for (let i = 0; i < 12; i++) {
+                    const size = Math.floor(Math.random() * 3) + 1;
+                    const duration = Math.floor(Math.random() * 3) + 3;
+                    const delay = (Math.random() * 2).toFixed(3);
+                    const left = Math.floor(Math.random() * 1500) - 500;
+                    const color = colors[Math.floor(Math.random() * colors.length)];
+                    const span = document.createElement('span');
+                    span.className = `absolute left-1/2 top-1/2 h-${size} w-${size} rotate-[215deg] animate-meteor-effect rounded-[9999px] bg-${color} shadow-[0_0_0_1px_#ffffff20]`;
+                    span.style.cssText = `top: -20px; right: ${left}px; animation-delay: ${delay}s; animation-duration: ${duration}s;`;
+                    meteorsContainer.appendChild(span);
+                }
+            }
+
+            // Tab scroll left/right (mirror app.php)
+            const scrollLeftBtn = document.getElementById('scrollLeft');
+            const scrollRightBtn = document.getElementById('scrollRight');
+            if (scrollLeftBtn) {
+                scrollLeftBtn.addEventListener('click', function() {
+                    document.querySelector('.tabs-container').scrollBy({ left: -100, behavior: 'smooth' });
+                });
+            }
+            if (scrollRightBtn) {
+                scrollRightBtn.addEventListener('click', function() {
+                    document.querySelector('.tabs-container').scrollBy({ left: 100, behavior: 'smooth' });
+                });
+            }
+        });
+    </script>
+</body>
+</html>

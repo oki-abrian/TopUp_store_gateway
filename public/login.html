@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="dark">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0, minimal-ui">
+    <meta content="Aruteru Shoppu Top Up Game" name="description">
+    <meta content="Top up game murah" name="keyword">
+    <meta name="author" content="Sahabat Store x DhaMus">
+    <title>Masuk — Aruteru Shoppu</title>
+    <link rel="shortcut icon" href="/imagehome/Footeraru.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="/library/assets/guest/css/e00de8768e0e97d0dsddd0b0.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        murky: {
+                            200: '#e2e8f0',
+                            300: '#cbd5e1',
+                            400: '#94a3b8',
+                            500: '#64748b',
+                            600: '#475569',
+                            700: '#334155',
+                            800: '#1e293b',
+                            900: '#0f172a',
+                        },
+                        'dark-new3': '#182232',
+                        melpa: {
+                            100: '#1e293b',
+                        },
+                        primary: {
+                            400: '#818cf8',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        :root {
+            --warna_1: #1e293b;
+            --warna_2: #0f172a;
+            --warna_3: #6366f1;
+            --warna_4: #334155;
+            --primary-500: #6366f1;
+            --murky-700-hover: #334155;
+        }
+        :root[data-theme="light"] {
+            --warna_1: #ffffff;
+            --warna_2: #f8f9fa;
+            --warna_3: #007bff;
+            --warna_4: #e9ecef;
+            --primary-500: #007bff;
+            --murky-700-hover: #dee2e6;
+            --text-color: #343a40;
+            --bg-color: #ffffff;
+        }
+        :root[data-theme="dark"] {
+            --warna_1: #1e293b;
+            --warna_2: #0f172a;
+            --warna_3: #6366f1;
+            --warna_4: #334155;
+            --primary-500: #007bff;
+            --murky-700-hover: #334155;
+            --text-color: #ffffff;
+            --menu-text: #ffffff;
+            --bg-color: #0f172a;
+        }
+        [x-cloak] { display: none !important; }
+        body { font-family: 'Inter', system-ui, sans-serif; }
+    </style>
+    <script defer src="//cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"></script>
+</head>
+<body class="text-white antialiased bg-[#0f172a]" x-init="initTurnstile()">
+    <div class="jsx-1305739042 __className_a8b5ca font-sans" x-data="loginData()">
+        <div class="relative flex min-h-screen items-center justify-center px-4 sm:px-32">
+            <div class="absolute top-4 left-4 z-20">
+                <a class="inline-flex items-center justify-center rounded-md bg-primary-500 px-4 py-2 text-sm font-medium text-white duration-300 hover:bg-primary-400 !bg-murky-700 !p-2 hover:!bg-murky-800" href="/" style="outline: none;">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" class="h-5 w-5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </a>
+            </div>
+            <div class="absolute inset-0 z-10 bg-gradient-to-b from-gray-900/90 to-gray-900/50"></div>
+            <div class="z-20 w-full">
+                <div class="mx-auto w-full max-w-md space-y-8 lg:mx-0 mt-5">
+                    <div class="relative backdrop-blur-2xl bg-white/10 p-8 rounded-2xl shadow-2xl border border-white/20 overflow-hidden">
+                        <div class="absolute inset-0 backdrop-blur-xl bg-gradient-to-b from-white/10 to-black/10 -z-10"></div>
+                        <div class="relative z-10">
+                            <div>
+                                <div class="flex justify-center mb-4">
+                                    <img src="/imagehome/Footeraru.png" alt="Logo" class="h-16 w-auto" />
+                                </div>
+                                <h2 class="mt-2 text-2xl font-bold tracking-tight text-white sm:text-3xl text-center">Masuk</h2>
+                                <div class="mt-4 space-y-4">
+                                    <div class="flex items-center p-4 bg-gray-800/50 rounded-lg border border-gray-700/50">
+                                        <div class="flex-shrink-0">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg>
+                                        </div>
+                                        <div class="ml-4"><p class="text-sm text-white/80">Masuk dengan akun yang telah Anda daftarkan</p></div>
+                                    </div>
+                                    <div class="flex items-center justify-between pt-2">
+                                        <span class="text-sm text-white/80">Belum punya akun?</span>
+                                        <a href="/auth/register" class="inline-flex items-center px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" /></svg>
+                                            Daftar
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            <div x-show="error" x-cloak class="mt-4 rounded-lg bg-red-500/10 border border-red-500/30 p-3 text-sm text-red-300" x-text="error"></div>
+                            <form @submit.prevent="doLogin" class="mt-8 space-y-6">
+                                <div class="space-y-4 rounded-md">
+                                    <div>
+                                        <label for="username" class="block text-sm font-medium text-white/90 pb-2">Username</label>
+                                        <input id="username" x-model="username" name="username" type="text" autocomplete="username" required class="relative block w-full appearance-none rounded-md border-0 bg-murky-200 px-3 py-2 text-xs text-murky-800 placeholder-murky-800 focus:z-10 focus:border-transparent focus:outline-none focus:ring-transparent focus:bg-white" placeholder="Username">
+                                    </div>
+                                    <div>
+                                        <label for="password" class="block text-sm font-medium text-white/90 pb-2">Password</label>
+                                        <div class="relative">
+                                            <input id="password" x-model="password" :type="showPass ? 'text' : 'password'" name="password" autocomplete="current-password" required class="relative block w-full appearance-none rounded-md border-0 bg-murky-200 px-3 py-2 pr-10 text-xs text-murky-800 placeholder-murky-800 focus:z-10 focus:border-transparent focus:outline-none focus:ring-transparent focus:bg-white" placeholder="Password">
+                                            <button type="button" @click="showPass = !showPass" class="absolute inset-y-0 right-0 pr-3 flex items-center text-murky-600 hover:text-murky-800" tabindex="-1">
+                                                <i class="fa" :class="showPass ? 'fa-eye-slash' : 'fa-eye'"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                    <div class="flex items-center">
+                                        <input id="remember" x-model="remember" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-primary-500 focus:ring-primary-500">
+                                        <label for="remember" class="ml-2 block text-sm text-white/80">Ingat saya</label>
+                                    </div>
+                                    <a href="/auth/forgot-password" class="text-sm text-blue-400 hover:text-blue-300">Lupa password?</a>
+                                </div>
+                                <div id="turnstile-container" class="flex justify-center my-4"></div>
+                                <button type="submit" class="group relative flex w-full justify-center rounded-md bg-primary-500 px-4 py-2 text-sm font-medium text-white duration-300 hover:bg-primary-400 focus:outline-none" :disabled="loading">
+                                    <span x-text="loading ? 'Memproses...' : 'Masuk'"></span>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+    <script>
+        function loginData() {
+            return {
+                username: '',
+                password: '',
+                remember: true,
+                showPass: false,
+                loading: false,
+                error: '',
+                sitekey: '',
+                widgetId: null,
+                initTurnstile() {
+                    fetch('/api/config/turnstile')
+                        .then(res => res.json())
+                        .then(res => {
+                            if (res.result && res.sitekey) {
+                                this.sitekey = res.sitekey;
+                                this.renderWidget();
+                            }
+                        });
+                },
+                renderWidget() {
+                    if (typeof turnstile !== 'undefined' && this.sitekey) {
+                        this.widgetId = turnstile.render('#turnstile-container', {
+                            sitekey: this.sitekey,
+                            theme: 'dark'
+                        });
+                    } else {
+                        setTimeout(() => this.renderWidget(), 100);
+                    }
+                },
+                doLogin() {
+                    let token = null;
+                    if (this.widgetId !== null && typeof turnstile !== 'undefined') {
+                        token = turnstile.getResponse(this.widgetId);
+                        if (!token) {
+                            this.error = 'Silakan selesaikan Captcha.';
+                            return;
+                        }
+                    }
+
+                    this.loading = true;
+                    this.error = '';
+                    fetch('/api/auth/login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ username: this.username, password: this.password, turnstile_token: token })
+                    })
+                        .then(res => res.json())
+                        .then(res => {
+                            this.loading = false;
+                            if (res.result) {
+                                localStorage.setItem('auth_token', res.token || '');
+                                localStorage.setItem('auth_user', JSON.stringify({ username: res.username, level: res.level }));
+                                window.location.href = '/account/';
+                            } else {
+                                this.error = res.message || 'Username atau password salah.';
+                                if (this.widgetId !== null) turnstile.reset(this.widgetId);
+                            }
+                        })
+                        .catch(() => {
+                            this.loading = false;
+                            this.error = 'Terjadi kesalahan, coba lagi.';
+                            if (this.widgetId !== null) turnstile.reset(this.widgetId);
+                        });
+                }
+            };
+        }
+    </script>
+</body>
+</html>

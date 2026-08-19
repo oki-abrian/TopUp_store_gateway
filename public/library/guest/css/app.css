@@ -1,0 +1,195 @@
+:root {
+    /* Base colors */
+    --bg-dark: rgb(18, 18, 18);
+    --bg-skeleton: rgb(18, 18, 18);
+    --bg-category: rgb(31, 31, 31);
+    --animation-pulse: pulse 1.5s infinite alternate;
+}
+
+.skeleton-berita {
+    min-height: 180px;
+    border-radius: 14px;
+    overflow: hidden;
+    background-color: var(--bg-skeleton);
+    animation: var(--animation-pulse);
+}
+
+@keyframes pulse {
+    0% {
+        opacity: 0.6;
+    }
+    100% {
+        opacity: 1;
+    }
+}
+
+.featured-game-card {
+    position: relative;
+    overflow: hidden;
+}
+
+.bg-category-1 {
+    background: var(--bg-category);
+    position: relative;
+}
+
+.bg-category-2 {
+    background: var(--bg-category);
+    position: relative;
+}
+
+.bg-category-3 {
+    background: var(--bg-category);
+    position: relative;
+}
+
+.bg-category-4 {
+    background: var(--bg-category);
+    position: relative;
+    background-image: url('../images/ccsil.svg');
+    background-repeat: no-repeat;
+    background-position: right top;
+    background-size: 150% 200%;
+}
+
+.bg-category-5 {
+    background: var(--bg-category);
+    position: relative;
+}
+
+.bg-category-6 {
+    background: var(--bg-category);
+    position: relative;
+}
+
+.bg-category-7 {
+    background: var(--bg-category);
+    position: relative;
+}
+
+.bg-category-8 {
+    background: var(--bg-category);
+    position: relative;
+}
+
+/* Style untuk pattern circle */
+.bg-category-1::before,
+.bg-category-2::before,
+.bg-category-3::before,
+.bg-category-4::before,
+.bg-category-5::before,
+.bg-category-6::before,
+.bg-category-7::before,
+.bg-category-8::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url('../images/ccsil.svg');
+    background-repeat: no-repeat;
+    background-position: 11% 11%;
+    background-size: 140% auto;
+    opacity: 1;
+    z-index: 0;
+}
+
+/* Tambahkan animasi hover untuk efek interaktif */
+[class^="bg-category-"]:hover::before {
+    opacity: 1;
+    transition: opacity 0.3s ease;
+}
+
+/* Pastikan konten tetap di atas pattern */
+[class^="bg-category-"] * {
+    position: relative;
+    z-index: 1;
+}
+
+/* Hide scrollbar but keep functionality */
+.no-scrollbar {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+}
+.no-scrollbar::-webkit-scrollbar {
+    display: none; /* Chrome, Safari and Opera */
+}
+
+/* Make tabs container horizontally scrollable */
+.tabs-container {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+}
+
+/* Navigation arrows responsive behavior */
+@media (min-width: 768px) {
+    #scrollLeft, #scrollRight {
+        display: none;
+    }
+}
+
+.category-item {
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    transform: translateY(0) perspective(1000px);
+    transform-style: preserve-3d;
+}
+
+.category-item:hover {
+    transform: translateY(-8px) rotateX(2deg) rotateY(-5deg);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.featured-game-card {
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    transform: translateY(0) perspective(1000px);
+    transform-style: preserve-3d;
+}
+
+.featured-game-card:hover {
+    transform: translateY(-8px) rotateX(2deg) rotateY(-5deg);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1);
+}
+
+.category-item img {
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    backface-visibility: hidden;
+}
+
+.category-item:hover img {
+    transform: scale(1.1);
+}
+
+.featured-game-card .blur-sharp img {
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    backface-visibility: hidden;
+}
+
+.featured-game-card:hover .blur-sharp img {
+    filter: blur(2px) brightness(90%);
+    transform: scale(1.05);
+}
+
+.featured-game-card article {
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 0;
+    backface-visibility: hidden;
+}
+
+.featured-game-card:hover article {
+    opacity: 1;
+    transform: translateY(-8px);
+}
+
+.mdigital-item-container {
+    transition: all 0.5s ease;
+    background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%);
+    opacity: 0;
+    backface-visibility: hidden;
+}
+
+.featured-game-card:hover .mdigital-item-container {
+    opacity: 1;
+}

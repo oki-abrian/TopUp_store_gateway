@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="dark">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0, minimal-ui">
+    <meta content="Aruteru Shoppu Top Up Game" name="description">
+    <meta content="Top up game murah" name="keyword">
+    <meta name="author" content="Sahabat Store x DhaMus">
+    <title>Dashboard — Aruteru Shoppu</title>
+    <link rel="shortcut icon" href="/imagehome/Footeraru.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="/library/assets/guest/css/e00de8768e0e97d0dsddd0b0.css">
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/placeholder-loading/dist/css/placeholder-loading.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="/library/assets/guest/css/header.css">
+    <link rel="stylesheet" href="/library/assets/guest/css/mobile-menu.css">
+    <link rel="stylesheet" href="/library/assets/guest/css/e00de8768e0e97d0dsddd0bb.css">
+    <link rel="stylesheet" href="/library/assets/guest/css/app.css">
+    <link rel="stylesheet" href="/library/assets/guest/css/footer.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        murky: {
+                            200: '#e2e8f0',
+                            300: '#cbd5e1',
+                            400: '#94a3b8',
+                            500: '#64748b',
+                            600: '#475569',
+                            700: '#334155',
+                            800: '#1e293b',
+                            900: '#0f172a',
+                        },
+                        'dark-new3': '#182232',
+                        melpa: {
+                            100: '#1e293b',
+                        },
+                        primary: {
+                            400: '#818cf8',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        :root {
+            --warna_1: #1e293b;
+            --warna_2: #0f172a;
+            --warna_3: #6366f1;
+            --warna_4: #334155;
+            --primary-500: #6366f1;
+            --murky-700-hover: #334155;
+        }
+        :root[data-theme="light"] {
+            --warna_1: #ffffff;
+            --warna_2: #f8f9fa;
+            --warna_3: #007bff;
+            --warna_4: #e9ecef;
+            --primary-500: #007bff;
+            --murky-700-hover: #dee2e6;
+            --text-color: #343a40;
+            --bg-color: #ffffff;
+        }
+        :root[data-theme="dark"] {
+            --warna_1: #1e293b;
+            --warna_2: #0f172a;
+            --warna_3: #6366f1;
+            --warna_4: #334155;
+            --primary-500: #007bff;
+            --murky-700-hover: #334155;
+            --text-color: #ffffff;
+            --menu-text: #ffffff;
+            --bg-color: #0f172a;
+        }
+        [x-cloak] { display: none !important; }
+        .desktop-nav-link, .mobile-nav-link { font-size: 12px; padding: 0.3rem 0.4rem; display: inline-flex; align-items: center; gap: 0.25rem; color: white; font-weight: 500; }
+        [data-theme="dark"] .desktop-nav-link { color: white; font-weight: 500; }
+        [data-theme="light"] .desktop-nav-link { color: #000000; font-weight: 600; }
+        .account-sidebar a.active { background: rgba(99, 102, 241, 0.2); color: #fff; border-left: 3px solid #6366f1; }
+    </style>
+    <script defer src="//cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body class="text-white antialiased bg-[#0f172a]" data-aruteru-layout>
+    <div id="site-header"></div>
+    <main class="relative">
+        <div id="app" x-data="accountData()" x-init="initAccount()">
+            <div x-show="!authed" x-cloak class="container py-24 text-center">
+                <h2 class="text-2xl font-bold mb-4">Silakan masuk terlebih dahulu</h2>
+                <a href="/auth/login" class="inline-flex items-center justify-center rounded-md bg-primary-500 px-4 py-2 text-sm font-medium text-white">Masuk</a>
+            </div>
+            <div x-show="authed" x-cloak class="container py-8">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <!-- Sidebar -->
+                    <div class="md:col-span-1">
+                        <div class="rounded-xl bg-murky-800 p-4">
+                            <div class="flex items-center gap-3 mb-4">
+                                <div class="h-12 w-12 rounded-full bg-primary-500 flex items-center justify-center text-lg font-bold" x-text="(user.username || 'U').charAt(0).toUpperCase()"></div>
+                                <div>
+                                    <div class="font-semibold" x-text="user.username || '-'"></div>
+                                    <div class="text-xs text-murky-300" x-text="user.level || '-'"></div>
+                                </div>
+                            </div>
+                            <nav class="account-sidebar flex flex-col gap-1 text-sm">
+                                <a href="#" class="rounded-lg px-3 py-2 text-murky-200 hover:bg-murky-700" :class="{ 'active': tab === 'dashboard' }" @click.prevent="tab = 'dashboard'"><i class="bi bi-speedometer2 mr-2"></i>Dashboard</a>
+                                
+                                <div class="px-3 py-2 text-xs font-semibold text-murky-400 mt-2 mb-1">MAIN MENU</div>
+                                <a href="#" class="rounded-lg px-3 py-2 text-murky-200 hover:bg-murky-700" :class="{ 'active': tab === 'hall_of_fame' }" @click.prevent="tab = 'hall_of_fame'"><i class="bi bi-trophy mr-2"></i>Hall of Fame</a>
+                                <a href="#" class="rounded-lg px-3 py-2 text-murky-200 hover:bg-murky-700" :class="{ 'active': tab === 'history' }" @click.prevent="tab = 'history'; loadHistory()"><i class="bi bi-clock-history mr-2"></i>Riwayat</a>
+                                
+                                <div x-data="{ openMenu: false }">
+                                    <button @click="openMenu = !openMenu" class="w-full flex items-center justify-between rounded-lg px-3 py-2 text-murky-200 hover:bg-murky-700" :class="{ 'active': tab === 'deposit_new' || tab === 'deposit_history' }">
+                                        <span><i class="bi bi-wallet2 mr-2"></i>Deposit</span>
+                                        <i class="bi bi-chevron-down text-[10px] transition-transform duration-200" :class="openMenu ? 'rotate-180' : ''"></i>
+                                    </button>
+                                    <div x-show="openMenu" x-collapse>
+                                        <div class="flex flex-col gap-1 pl-8 pr-2 py-1">
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700" :class="{ 'text-primary-400': tab === 'deposit_new' }" @click.prevent="tab = 'deposit_new'">New</a>
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700" :class="{ 'text-primary-400': tab === 'deposit_history' }" @click.prevent="tab = 'deposit_history'; loadDepositHistory()">History</a>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="px-3 py-2 text-xs font-semibold text-murky-400 mt-2 mb-1">Others</div>
+                                <div x-data="{ openMenu: false }">
+                                    <button @click="openMenu = !openMenu" class="w-full flex items-center justify-between rounded-lg px-3 py-2 text-murky-200 hover:bg-murky-700">
+                                        <span><i class="bi bi-code-slash mr-2"></i>API</span>
+                                        <i class="bi bi-chevron-down text-[10px] transition-transform duration-200" :class="openMenu ? 'rotate-180' : ''"></i>
+                                    </button>
+                                    <div x-show="openMenu" x-collapse>
+                                        <div class="flex flex-col gap-1 pl-8 pr-2 py-1">
+                                            <a href="/page/documentation/profile" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700">Profile</a>
+                                            <a href="/page/documentation/service" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700">Service</a>
+                                            <a href="/page/documentation/order" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700">Order</a>
+                                            <a href="/page/documentation/status" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700">Status</a>
+                                            <a href="/page/documentation/webhook" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700">Webhook</a>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div x-data="{ openMenu: false }">
+                                    <button @click="openMenu = !openMenu" class="w-full flex items-center justify-between rounded-lg px-3 py-2 text-murky-200 hover:bg-murky-700">
+                                        <span><i class="bi bi-info-circle mr-2"></i>Pages</span>
+                                        <i class="bi bi-chevron-down text-[10px] transition-transform duration-200" :class="openMenu ? 'rotate-180' : ''"></i>
+                                    </button>
+                                    <div x-show="openMenu" x-collapse>
+                                        <div class="flex flex-col gap-1 pl-8 pr-2 py-1">
+                                            <a href="/page/terms-and-condition" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700">Terms and Conditions</a>
+                                            <a href="/page/privacy-policy" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700">Privacy Policy</a>
+                                            <a href="/page/general-questions" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700">General Questions</a>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="px-3 py-2 text-xs font-semibold text-murky-400 mt-2 mb-1">Akun</div>
+                                <a href="#" class="rounded-lg px-3 py-2 text-murky-200 hover:bg-murky-700" :class="{ 'active': tab === 'profile' }" @click.prevent="tab = 'profile'; loadProfile()"><i class="bi bi-person mr-2"></i>Profil</a>
+                                <a href="#" class="rounded-lg px-3 py-2 text-murky-200 hover:bg-murky-700" :class="{ 'active': tab === 'mutation' }" @click.prevent="tab = 'mutation'; loadMutations()"><i class="bi bi-arrow-left-right mr-2"></i>Mutasi</a>
+                                <a href="#" class="rounded-lg px-3 py-2 text-murky-200 hover:bg-murky-700" :class="{ 'active': tab === 'activity' }" @click.prevent="tab = 'activity'; loadActivity()"><i class="bi bi-activity mr-2"></i>Aktivitas</a>
+                                <template x-if="user.level === 'Admin'">
+                                    <a href="/admin" class="rounded-lg px-3 py-2 text-amber-400 hover:bg-murky-700 mt-2 border border-amber-400/30"><i class="bi bi-shield-lock mr-2"></i>Admin Panel</a>
+                                </template>
+                                <a href="#" class="rounded-lg px-3 py-2 text-red-400 hover:bg-murky-700" @click.prevent="logout"><i class="bi bi-box-arrow-right mr-2"></i>Keluar</a>
+                            </nav>
+                        </div>
+                    </div>
+
+                    <!-- Content -->
+                    <div class="md:col-span-3 space-y-6">
+                        <!-- Dashboard -->
+                        <template x-if="tab === 'dashboard'">
+                            <div class="space-y-6">
+                                <div class="rounded-xl bg-murky-800 p-6 text-center">
+                                    <h1 class="text-2xl font-bold mb-2">Welcome</h1>
+                                    <p class="text-sm text-murky-300" x-text="welcomeMsg"></p>
+                                </div>
+                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                    <div class="rounded-xl bg-murky-800 p-5">
+                                        <div class="text-2xl font-bold text-green-400">Rp <span x-text="fmt(balance)"></span></div>
+                                        <div class="text-xs text-murky-300 mt-1">Balance</div>
+                                    </div>
+                                    <div class="rounded-xl bg-murky-800 p-5">
+                                        <div class="text-2xl font-bold" x-text="dash.total_order || 0"></div>
+                                        <div class="text-xs text-murky-300 mt-1">Total Order</div>
+                                    </div>
+                                    <div class="rounded-xl bg-murky-800 p-5">
+                                        <div class="text-2xl font-bold" x-text="dash.total_deposit || 0"></div>
+                                        <div class="text-xs text-murky-300 mt-1">Total Deposit</div>
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div class="rounded-xl bg-murky-800 p-5">
+                                        <h4 class="font-medium mb-3">Order Revenue</h4>
+                                        <div class="flex justify-between text-sm">
+                                            <div><p class="text-xs text-murky-300">Bulan Ini</p><p class="text-green-400 font-semibold">Rp <span x-text="fmt(dash.revenue_order_this_month)"></span></p></div>
+                                            <div class="text-right"><p class="text-xs text-murky-300">Bulan Lalu</p><p class="font-semibold">Rp <span x-text="fmt(dash.revenue_order_last_month)"></span></p></div>
+                                        </div>
+                                    </div>
+                                    <div class="rounded-xl bg-murky-800 p-5">
+                                        <h4 class="font-medium mb-3">Deposit Revenue</h4>
+                                        <div class="flex justify-between text-sm">
+                                            <div><p class="text-xs text-murky-300">Bulan Ini</p><p class="text-green-400 font-semibold">Rp <span x-text="fmt(dash.revenue_depo_this_month)"></span></p></div>
+                                            <div class="text-right"><p class="text-xs text-murky-300">Bulan Lalu</p><p class="font-semibold">Rp <span x-text="fmt(dash.revenue_depo_last_month)"></span></p></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- Mutation -->
+                        <template x-if="tab === 'mutation'">
+                            <div class="rounded-xl bg-murky-800 overflow-hidden">
+                                <div class="p-5 border-b border-murky-700 font-semibold">Mutasi Saldo</div>
+                                <table class="w-full text-sm">
+                                    <thead class="bg-murky-700/50 text-xs text-murky-300">
+                                        <tr>
+                                            <th class="text-left px-5 py-3">Tanggal</th>
+                                            <th class="text-left px-5 py-3">Tipe</th>
+                                            <th class="text-right px-5 py-3">Jumlah</th>
+                                            <th class="text-left px-5 py-3">Catatan</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-murky-700">
+                                        <template x-for="m in mutations" :key="m.id">
+                                            <tr>
+                                                <td class="px-5 py-3 text-xs text-murky-300" x-text="m.date_cr"></td>
+                                                <td class="px-5 py-3"><span class="px-2 py-0.5 rounded text-xs font-semibold" :class="m.type_name === '+' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'" x-text="m.type_name"></span></td>
+                                                <td class="px-5 py-3 text-right font-semibold" :class="m.type_name === '+' ? 'text-green-400' : 'text-red-400'" x-text="fmt(m.amount)"></td>
+                                                <td class="px-5 py-3 text-xs text-murky-300" x-text="m.note"></td>
+                                            </tr>
+                                        </template>
+                                        <template x-if="mutations.length === 0"><tr><td colspan="4" class="px-5 py-8 text-center text-murky-400">Belum ada mutasi</td></tr></template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </template>
+
+                        <!-- History -->
+                        <template x-if="tab === 'history'">
+                            <div class="rounded-xl bg-murky-800 overflow-hidden">
+                                <div class="p-5 border-b border-murky-700 font-semibold">Riwayat Transaksi</div>
+                                <table class="w-full text-sm">
+                                    <thead class="bg-murky-700/50 text-xs text-murky-300">
+                                        <tr>
+                                            <th class="text-left px-5 py-3">Invoice</th>
+                                            <th class="text-left px-5 py-3">Layanan</th>
+                                            <th class="text-left px-5 py-3">Target</th>
+                                            <th class="text-right px-5 py-3">Harga</th>
+                                            <th class="text-left px-5 py-3">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-murky-700">
+                                        <template x-for="t in history" :key="t.order_id">
+                                            <tr>
+                                                <td class="px-5 py-3 text-xs font-mono text-orange-400"><a :href="'/invoices/' + t.order_id" class="hover:underline" x-text="t.order_id"></a></td>
+                                                <td class="px-5 py-3 text-xs" x-text="t.service_name"></td>
+                                                <td class="px-5 py-3 text-xs text-murky-300" x-text="t.target"></td>
+                                                <td class="px-5 py-3 text-right text-xs font-semibold" x-text="'Rp ' + fmt(t.price)"></td>
+                                                <td class="px-5 py-3"><span class="px-2 py-0.5 rounded text-xs font-semibold" :class="statusClass(t.status)" x-text="t.status"></span></td>
+                                            </tr>
+                                        </template>
+                                        <template x-if="history.length === 0"><tr><td colspan="5" class="px-5 py-8 text-center text-murky-400">Belum ada transaksi</td></tr></template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </template>
+
+                        <!-- Hall of Fame -->
+                        <template x-if="tab === 'hall_of_fame'">
+                            <div class="rounded-xl bg-murky-800 p-6">
+                                <h3 class="text-xl font-semibold mb-2">Hall of Fame</h3>
+                                <p class="text-sm text-murky-300 mb-4">Top spender bulan ini.</p>
+                                <!-- This could call the existing leaderboard API -->
+                            </div>
+                        </template>
+
+                        <!-- Activity -->
+                        <template x-if="tab === 'activity'">
+                            <div class="rounded-xl bg-murky-800 overflow-hidden">
+                                <div class="p-5 border-b border-murky-700 font-semibold">Log Aktivitas</div>
+                                <table class="w-full text-sm">
+                                    <thead class="bg-murky-700/50 text-xs text-murky-300">
+                                        <tr>
+                                            <th class="text-left px-5 py-3">Tanggal</th>
+                                            <th class="text-left px-5 py-3">Aktivitas</th>
+                                            <th class="text-left px-5 py-3">IP Address</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-murky-700">
+                                        <template x-for="a in activity" :key="a.id">
+                                            <tr>
+                                                <td class="px-5 py-3 text-xs text-murky-300" x-text="a.date"></td>
+                                                <td class="px-5 py-3 text-xs" x-text="a.action"></td>
+                                                <td class="px-5 py-3 text-xs text-murky-400 font-mono" x-text="a.ip"></td>
+                                            </tr>
+                                        </template>
+                                        <template x-if="activity.length === 0"><tr><td colspan="3" class="px-5 py-8 text-center text-murky-400">Belum ada aktivitas</td></tr></template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </template>
+
+                        <!-- Deposit New -->
+                        <template x-if="tab === 'deposit_new'">
+                            <div class="rounded-xl bg-murky-800 p-6">
+                                <h3 class="text-xl font-semibold mb-4">Deposit Saldo</h3>
+                                <form @submit.prevent="submitDeposit" class="space-y-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-murky-200 mb-2">Metode Pembayaran</label>
+                                        <select x-model="depositForm.method" required class="w-full rounded-md bg-murky-900 border border-murky-700 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500">
+                                            <option value="" disabled>Pilih Metode</option>
+                                            <template x-for="m in depositMethods" :key="m.code">
+                                                <option :value="m.code" x-text="m.name"></option>
+                                            </template>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-murky-200 mb-2">Jumlah Deposit</label>
+                                        <input type="number" x-model="depositForm.amount" required min="10000" class="w-full rounded-md bg-murky-900 border border-murky-700 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Minimal Rp 10.000">
+                                    </div>
+                                    <button type="submit" class="w-full rounded-md bg-primary-500 py-2 text-sm font-medium text-white hover:bg-primary-600 focus:outline-none" :disabled="depositLoading">
+                                        <span x-show="!depositLoading">Buat Deposit</span>
+                                        <span x-show="depositLoading">Memproses...</span>
+                                    </button>
+                                </form>
+                            </div>
+                        </template>
+
+                        <!-- Deposit History -->
+                        <template x-if="tab === 'deposit_history'">
+                            <div class="rounded-xl bg-murky-800 overflow-hidden">
+                                <div class="p-5 border-b border-murky-700 font-semibold">Riwayat Deposit</div>
+                                <table class="w-full text-sm">
+                                    <thead class="bg-murky-700/50 text-xs text-murky-300">
+                                        <tr>
+                                            <th class="text-left px-5 py-3">ID</th>
+                                            <th class="text-left px-5 py-3">Metode</th>
+                                            <th class="text-right px-5 py-3">Jumlah</th>
+                                            <th class="text-left px-5 py-3">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-murky-700">
+                                        <template x-for="d in depositHistory" :key="d.id">
+                                            <tr>
+                                                <td class="px-5 py-3 text-xs font-mono text-orange-400" x-text="d.id"></td>
+                                                <td class="px-5 py-3 text-xs" x-text="d.method"></td>
+                                                <td class="px-5 py-3 text-right text-xs font-semibold text-green-400" x-text="'Rp ' + fmt(d.amount)"></td>
+                                                <td class="px-5 py-3"><span class="px-2 py-0.5 rounded text-xs font-semibold" :class="d.status === 'paid' ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'" x-text="d.status"></span></td>
+                                            </tr>
+                                        </template>
+                                        <template x-if="depositHistory.length === 0"><tr><td colspan="4" class="px-5 py-8 text-center text-murky-400">Belum ada deposit</td></tr></template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </template>
+
+                        <!-- Profile -->
+                        <template x-if="tab === 'profile'">
+                            <div class="rounded-xl bg-murky-800 overflow-hidden" x-data="{ pTab: 'detail' }">
+                                <div class="flex border-b border-murky-700">
+                                    <button @click="pTab = 'detail'" class="px-5 py-3 text-sm font-medium hover:text-white" :class="pTab === 'detail' ? 'text-white border-b-2 border-primary-500' : 'text-murky-400'">Detail</button>
+                                    <button @click="pTab = 'edit'" class="px-5 py-3 text-sm font-medium hover:text-white" :class="pTab === 'edit' ? 'text-white border-b-2 border-primary-500' : 'text-murky-400'">Ubah Profil</button>
+                                    <button @click="pTab = 'password'" class="px-5 py-3 text-sm font-medium hover:text-white" :class="pTab === 'password' ? 'text-white border-b-2 border-primary-500' : 'text-murky-400'">Ubah Sandi</button>
+                                    <button @click="pTab = 'api'" class="px-5 py-3 text-sm font-medium hover:text-white" :class="pTab === 'api' ? 'text-white border-b-2 border-primary-500' : 'text-murky-400'">API Settings</button>
+                                </div>
+                                <div class="p-6">
+                                    <!-- Detail Tab -->
+                                    <div x-show="pTab === 'detail'" class="space-y-3 text-sm">
+                                        <div class="flex justify-between border-b border-murky-700 pb-2"><span class="text-murky-300">Username</span><span x-text="user.username"></span></div>
+                                        <div class="flex justify-between border-b border-murky-700 pb-2"><span class="text-murky-300">Nama</span><span x-text="profile.name || '-'"></span></div>
+                                        <div class="flex justify-between border-b border-murky-700 pb-2"><span class="text-murky-300">Email</span><span x-text="profile.email || '-'"></span></div>
+                                        <div class="flex justify-between border-b border-murky-700 pb-2"><span class="text-murky-300">No. WhatsApp</span><span x-text="profile.phone || '-'"></span></div>
+                                        <div class="flex justify-between border-b border-murky-700 pb-2"><span class="text-murky-300">Level</span><span x-text="user.level"></span></div>
+                                        <div class="flex justify-between border-b border-murky-700 pb-2"><span class="text-murky-300">Saldo</span><span class="text-green-400">Rp <span x-text="fmt(balance)"></span></span></div>
+                                    </div>
+
+                                    <!-- Edit Profile Tab -->
+                                    <div x-show="pTab === 'edit'">
+                                        <form @submit.prevent="updateProfile" class="space-y-4">
+                                            <div>
+                                                <label class="block text-xs text-murky-300 mb-1">Nama Lengkap</label>
+                                                <input type="text" x-model="profileForm.name" class="w-full rounded-md bg-murky-900 border border-murky-700 px-3 py-2 text-sm text-white focus:ring-2 focus:ring-primary-500">
+                                            </div>
+                                            <div>
+                                                <label class="block text-xs text-murky-300 mb-1">Email</label>
+                                                <input type="email" x-model="profileForm.email" class="w-full rounded-md bg-murky-900 border border-murky-700 px-3 py-2 text-sm text-white focus:ring-2 focus:ring-primary-500">
+                                            </div>
+                                            <div>
+                                                <label class="block text-xs text-murky-300 mb-1">WhatsApp</label>
+                                                <input type="text" x-model="profileForm.phone" class="w-full rounded-md bg-murky-900 border border-murky-700 px-3 py-2 text-sm text-white focus:ring-2 focus:ring-primary-500">
+                                            </div>
+                                            <button type="submit" class="rounded-md bg-primary-500 px-4 py-2 text-sm font-medium text-white hover:bg-primary-600">Simpan Perubahan</button>
+                                        </form>
+                                    </div>
+
+                                    <!-- Edit Password Tab -->
+                                    <div x-show="pTab === 'password'">
+                                        <form @submit.prevent="updatePassword" class="space-y-4">
+                                            <div>
+                                                <label class="block text-xs text-murky-300 mb-1">Sandi Lama</label>
+                                                <input type="password" x-model="passwordForm.old" class="w-full rounded-md bg-murky-900 border border-murky-700 px-3 py-2 text-sm text-white focus:ring-2 focus:ring-primary-500" required>
+                                            </div>
+                                            <div>
+                                                <label class="block text-xs text-murky-300 mb-1">Sandi Baru</label>
+                                                <input type="password" x-model="passwordForm.new" class="w-full rounded-md bg-murky-900 border border-murky-700 px-3 py-2 text-sm text-white focus:ring-2 focus:ring-primary-500" required>
+                                            </div>
+                                            <button type="submit" class="rounded-md bg-primary-500 px-4 py-2 text-sm font-medium text-white hover:bg-primary-600">Perbarui Sandi</button>
+                                        </form>
+                                    </div>
+
+                                    <!-- API Settings Tab -->
+                                    <div x-show="pTab === 'api'">
+                                        <div class="space-y-4">
+                                            <div>
+                                                <label class="block text-xs text-murky-300 mb-1">API Key (UID)</label>
+                                                <div class="flex gap-2">
+                                                    <input type="text" readonly :value="apiData.uid || 'Belum ada'" class="w-full rounded-md bg-murky-900 border border-murky-700 px-3 py-2 text-sm text-murky-400 font-mono">
+                                                    <button @click="copyToClipboard(apiData.uid)" class="rounded-md bg-murky-700 px-3 py-2 text-white hover:bg-murky-600"><i class="bi bi-copy"></i></button>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label class="block text-xs text-murky-300 mb-1">Secret Key (UKEY)</label>
+                                                <div class="flex gap-2">
+                                                    <input type="text" readonly :value="apiData.ukey || 'Belum ada'" class="w-full rounded-md bg-murky-900 border border-murky-700 px-3 py-2 text-sm text-murky-400 font-mono">
+                                                    <button @click="copyToClipboard(apiData.ukey)" class="rounded-md bg-murky-700 px-3 py-2 text-white hover:bg-murky-600"><i class="bi bi-copy"></i></button>
+                                                </div>
+                                            </div>
+                                            <button @click="generateApiKeys" class="rounded-md bg-red-500 px-4 py-2 text-sm font-medium text-white hover:bg-red-600"><i class="bi bi-arrow-repeat mr-2"></i>Regenerate Keys</button>
+
+                                            <hr class="border-murky-700 my-4">
+                                            
+                                            <form @submit.prevent="saveApiConfig" class="space-y-4">
+                                                <div>
+                                                    <label class="block text-xs text-murky-300 mb-1">IP Whitelist</label>
+                                                    <input type="text" x-model="apiData.whitelist" placeholder="Contoh: 127.0.0.1, 192.168.1.1 (Pisahkan dengan koma atau biarkan * untuk semua)" class="w-full rounded-md bg-murky-900 border border-murky-700 px-3 py-2 text-sm text-white focus:ring-2 focus:ring-primary-500">
+                                                </div>
+                                                <div>
+                                                    <label class="block text-xs text-murky-300 mb-1">Webhook Callback URL</label>
+                                                    <input type="url" x-model="apiData.callback" placeholder="https://domainanda.com/callback" class="w-full rounded-md bg-murky-900 border border-murky-700 px-3 py-2 text-sm text-white focus:ring-2 focus:ring-primary-500">
+                                                </div>
+                                                <button type="submit" class="rounded-md bg-primary-500 px-4 py-2 text-sm font-medium text-white hover:bg-primary-600">Simpan Konfigurasi</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    <div id="site-footer"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
+    <script src="/assets/js/layout.js"></script>
+    <script src="/assets/js/app-data.js"></script>
+    <script>
+        function accountData() {
+            return Object.assign(layoutData(), {
+                authed: false,
+                user: {},
+                profile: {},
+                dash: {},
+                mutations: [],
+                history: [],
+                activity: [],
+                depositHistory: [],
+                depositMethods: [],
+                depositForm: { method: '', amount: '' },
+                depositLoading: false,
+                profileForm: { name: '', email: '', phone: '' },
+                passwordForm: { old: '', new: '' },
+                apiData: { uid: '', ukey: '', whitelist: '', callback: '' },
+                balance: 0,
+                tab: 'dashboard',
+                initAccount() {
+                    this.loadConfig();
+                    const token = localStorage.getItem('auth_token');
+                    const u = localStorage.getItem('auth_user');
+                    if (!token || !u) {
+                        this.authed = false;
+                        return;
+                    }
+                    try {
+                        this.user = JSON.parse(u);
+                    } catch (e) {
+                        this.user = {};
+                    }
+                    this.authed = true;
+                    this.loadDashboard();
+                },
+                get welcomeMsg() {
+                    const today = this.dash.order_today || 0;
+                    const last = this.dash.order_last_day || 0;
+                    if (today && last) {
+                        return today > last ? 'Horee! Pesanan Anda hari ini lebih banyak dari pada hari kemarin ^^' : 'Sepertinya orderan Anda kurang baik untuk hari ini, semangat terus ya!';
+                    }
+                    return 'Halo selamat datang. Kami menyediakan layanan berkualitas, murah dan tentunya aman.';
+                },
+                loadDashboard() {
+                    fetchJSON('/api/account/dashboard?username=' + encodeURIComponent(this.user.username || ''))
+                        .then(res => {
+                            if (res.result) {
+                                this.dash = res.data || {};
+                                this.balance = this.dash.balance || 0;
+                            }
+                        })
+                        .catch(err => console.error(err));
+                },
+                loadMutations() {
+                    fetchJSON('/api/account/mutations?username=' + encodeURIComponent(this.user.username || ''))
+                        .then(res => { this.mutations = res.data || []; })
+                        .catch(err => console.error(err));
+                },
+                loadHistory() {
+                    fetchJSON('/api/account/transactions?username=' + encodeURIComponent(this.user.username || ''))
+                        .then(res => { this.history = res.data || []; })
+                        .catch(err => console.error(err));
+                },
+                loadProfile() {
+                    fetchJSON('/api/account/profile?username=' + encodeURIComponent(this.user.username || ''))
+                        .then(res => {
+                            if (res.result) {
+                                this.profile = res.data || {};
+                                this.balance = this.profile.balance || 0;
+                                this.profileForm.name = this.profile.name || '';
+                                this.profileForm.email = this.profile.email || '';
+                                this.profileForm.phone = this.profile.phone || '';
+                            }
+                        })
+                        .catch(err => console.error(err));
+                    
+                    fetchJSON('/api/account/api-settings?username=' + encodeURIComponent(this.user.username || ''))
+                        .then(res => {
+                            if (res.result && res.data) {
+                                this.apiData = {
+                                    uid: res.data.uid,
+                                    ukey: res.data.ukey,
+                                    whitelist: res.data.whitelist,
+                                    callback: res.data.callback
+                                };
+                            }
+                        });
+                },
+                updateProfile() {
+                    fetchJSON('/api/account/update-profile', { method: 'POST', body: JSON.stringify({ ...this.profileForm, username: this.user.username }) })
+                        .then(res => {
+                            if(res.result) { showToast('success', 'Profil diperbarui'); this.loadProfile(); }
+                            else { showToast('error', res.message); }
+                        });
+                },
+                updatePassword() {
+                    fetchJSON('/api/account/change-password', { method: 'POST', body: JSON.stringify({ ...this.passwordForm, username: this.user.username }) })
+                        .then(res => {
+                            if(res.result) { showToast('success', 'Kata sandi berhasil diperbarui'); this.passwordForm = {old:'', new:''}; }
+                            else { showToast('error', res.message); }
+                        });
+                },
+                generateApiKeys() {
+                    if(!confirm('Anda yakin ingin generate ulang API Key? Key lama tidak akan bisa digunakan lagi.')) return;
+                    fetchJSON('/api/account/generate-keys', { method: 'POST', body: JSON.stringify({ username: this.user.username }) })
+                        .then(res => {
+                            if(res.result) { showToast('success', 'API Keys berhasil di-generate'); this.loadProfile(); }
+                            else { showToast('error', res.message); }
+                        });
+                },
+                saveApiConfig() {
+                    fetchJSON('/api/account/update-api', { method: 'POST', body: JSON.stringify({ username: this.user.username, whitelist: this.apiData.whitelist, callback: this.apiData.callback }) })
+                        .then(res => {
+                            if(res.result) { showToast('success', 'Konfigurasi API disimpan'); }
+                            else { showToast('error', res.message); }
+                        });
+                },
+                loadActivity() {
+                    fetchJSON('/api/account/activity?username=' + encodeURIComponent(this.user.username || ''))
+                        .then(res => { this.activity = res.data || []; })
+                        .catch(err => console.error(err));
+                },
+                loadDepositHistory() {
+                    fetchJSON('/api/account/deposit/history?username=' + encodeURIComponent(this.user.username || ''))
+                        .then(res => { this.depositHistory = res.data || []; })
+                        .catch(err => console.error(err));
+                },
+                loadDepositMethods() {
+                    if(this.depositMethods.length === 0) {
+                        fetchJSON('/api/account/deposit/methods')
+                            .then(res => { this.depositMethods = res.data || []; })
+                            .catch(err => console.error(err));
+                    }
+                },
+                submitDeposit() {
+                    this.depositLoading = true;
+                    fetchJSON('/api/account/deposit/create', { method: 'POST', body: JSON.stringify({ username: this.user.username, ...this.depositForm }) })
+                        .then(res => {
+                            this.depositLoading = false;
+                            if(res.result) { 
+                                showToast('success', 'Deposit berhasil dibuat'); 
+                                window.location.href = '/invoices/' + res.data.invoice_id;
+                            }
+                            else { showToast('error', res.message); }
+                        })
+                        .catch(err => {
+                            this.depositLoading = false;
+                            showToast('error', 'Terjadi kesalahan sistem');
+                        });
+                },
+                statusClass(s) {
+                    const map = { success: 'bg-emerald-500/20 text-emerald-300', pending: 'bg-yellow-500/20 text-yellow-300', process: 'bg-blue-500/20 text-blue-300', system: 'bg-blue-500/20 text-blue-300', error: 'bg-red-500/20 text-red-300' };
+                    return map[s] || 'bg-gray-500/20 text-gray-300';
+                },
+                logout() {
+                    localStorage.removeItem('auth_token');
+                    localStorage.removeItem('auth_user');
+                    window.location.href = '/';
+                }
+            });
+        }
+    </script>
+</body>
+</html>

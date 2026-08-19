@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="dark">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0, minimal-ui">
+    <meta content="Aruteru Shoppu Top Up Game" name="description">
+    <meta content="Top up game murah" name="keyword">
+    <meta name="author" content="Sahabat Store x DhaMus">
+    <title>Aruteru Shoppu</title>
+    <link rel="shortcut icon" href="/imagehome/Footeraru.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="/library/assets/guest/css/e00de8768e0e97d0dsddd0b0.css">
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/placeholder-loading/dist/css/placeholder-loading.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="/library/assets/guest/css/header.css">
+    <link rel="stylesheet" href="/library/assets/guest/css/mobile-menu.css">
+    <link rel="stylesheet" href="/library/assets/guest/css/e00de8768e0e97d0dsddd0bb.css">
+    <link rel="stylesheet" href="/library/assets/guest/css/app.css">
+    <link rel="stylesheet" href="/library/assets/guest/css/home.css">
+    <link rel="stylesheet" href="/library/assets/guest/css/order.css">
+    <link rel="stylesheet" href="/library/assets/guest/css/footer.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        murky: {
+                            200: '#e2e8f0',
+                            300: '#cbd5e1',
+                            400: '#94a3b8',
+                            500: '#64748b',
+                            600: '#475569',
+                            700: '#334155',
+                            800: '#1e293b',
+                            900: '#0f172a',
+                        },
+                        'dark-new3': '#182232',
+                        melpa: {
+                            100: '#1e293b',
+                        },
+                        primary: {
+                            400: '#818cf8',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        :root {
+            --warna_1: #1e293b;
+            --warna_2: #0f172a;
+            --warna_3: #6366f1;
+            --warna_4: #334155;
+            --primary-500: #6366f1;
+            --murky-700-hover: #334155;
+        }
+        :root[data-theme="light"] {
+            --warna_1: #ffffff;
+            --warna_2: #f8f9fa;
+            --warna_3: #007bff;
+            --warna_4: #e9ecef;
+            --primary-500: #007bff;
+            --murky-700-hover: #dee2e6;
+            --text-color: #343a40;
+            --bg-color: #ffffff;
+        }
+        :root[data-theme="dark"] {
+            --warna_1: #1e293b;
+            --warna_2: #0f172a;
+            --warna_3: #6366f1;
+            --warna_4: #334155;
+            --primary-500: #007bff;
+            --murky-700-hover: #334155;
+            --text-color: #ffffff;
+            --menu-text: #ffffff;
+            --bg-color: #0f172a;
+        }
+        [x-cloak] { display: none !important; }
+        .desktop-nav-link, .mobile-nav-link { font-size: 12px; padding: 0.3rem 0.4rem; display: inline-flex; align-items: center; gap: 0.25rem; color: white; font-weight: 500; }
+        [data-theme="dark"] .desktop-nav-link { color: white; font-weight: 500; }
+        [data-theme="light"] .desktop-nav-link { color: #000000; font-weight: 600; }
+        .popup-structure { display: none; }
+        .popup-structure.show { display: flex; }
+        /* Responsive product thumbnail (mirror content.php @media) */
+        @media (min-width: 768px) {
+            .product-thumbnail-container {
+                width: 250px !important;
+                height: 300px !important;
+                left: 10rem !important;
+                top: -35rem !important;
+            }
+        }
+        .shelf { display: flex; justify-content: space-between; padding: 4px 0; }
+        .labelbox { color: #9ca3af; }
+        .valuebox { font-weight: 600; text-align: right; }
+    </style>
+    <script defer src="//cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body class="text-white antialiased bg-[#0f172a]" data-aruteru-layout>
+    <div id="site-header"></div>
+
+    <main class="relative">
+        <div id="app" x-data="orderData()" x-init="initOrder()">
+            <!-- Category Banner -->
+            <div class="relative h-56 w-full bg-murky-800 lg:h-[340px]" x-show="category.banner">
+                <div class="h-full w-full overflow-hidden">
+                    <img :src="category.banner" class="h-full w-full object-cover object-center" alt="Category Banner" style="aspect-ratio: 16/9;" />
+                </div>
+                <ul class="circles"></ul>
+                <div class="container relative z-20 flex h-auto w-full flex-col justify-start gap-4 py-2 lg:py-4" style="max-height: 200px;">
+                    <article class="flex items-start gap-4 relative" style="min-height: 120px;">
+                        <div class="product-thumbnail-container absolute" style="width: 110px; height: 120px; display: flex; align-items: center; justify-content: center; left: 1rem; top: -4rem;">
+                            <img :src="category.image" class="z-20 rounded-2xl object-contain shadow-2xl" style="max-width: 140px; max-height: 160px; width: auto; height: auto;" :alt="category.name" />
+                        </div>
+                    </article>
+                </div>
+            </div>
+            <div class="bg-title-product min-h-[120px] shadow-2xl md:min-h-[140px]">
+                <div class="container">
+                    <div class="ml-[8.5rem] pt-4 md:ml-[12rem] md:pt-5">
+                        <div>
+                            <h2 class="truncate text-base font-semibold text-white md:text-2xl" x-text="category.name"></h2>
+                            <p class="truncate text-xs text-white md:text-base" x-text="category.owner"></p>
+                        </div>
+                        <div class="py-4 sm:py-0">
+                            <div class="mt-4 flex flex-col gap-2 text-xs sm:flex-row sm:items-center sm:gap-8 sm:text-sm/6">
+                                <div class="flex items-center gap-2">
+                                    <img src="/library/assets/guest/images/icon/lightning.gif" width="30" height="30" decoding="async" data-nimg="1" loading="lazy" class="size-8" style="color:transparent">
+                                    <span>Proses Cepat</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <img src="/library/assets/guest/images/icon/contact-support.gif" width="30" height="30" decoding="async" data-nimg="1" loading="lazy" class="size-8" style="color:transparent">
+                                    <span>Layanan Chat 24/7</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <img src="/library/assets/guest/images/icon/payment-security.gif" width="30" height="30" decoding="async" data-nimg="1" loading="lazy" class="size-8" style="color:transparent">
+                                    <span>Pembayaran Aman!</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Testimoni Desktop (mirror testimoni-desktop.php) -->
+                    <div class="mt-4 hidden rounded-xl bg-dark-new3 shadow-2xl md:block">
+                        <div class="flex border-b border-murky-600">
+                            <div class="flex items-center justify-center rounded-tl-xl bg-gradient-to-b from-primary-500 to-primary-600 px-3 py-2 text-xl font-semibold">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="h-4 w-4"><path fill-rule="evenodd" d="M10.868 2.884c-.321-.772-1.415-.772-1.736 0l-1.83 4.401-4.753.381c-.833.067-1.171 1.107-.536 1.651l3.62 3.102-1.106 4.637c-.194.813.691 1.456 1.405 1.02L10 15.591l4.069 2.485c.713.436 1.598-.207 1.404-1.02l-1.106-4.637 3.62-3.102c.635-.544.297-1.584-.536-1.65l-4.752-.382-1.831-4.401z" clip-rule="evenodd"></path></svg>
+                            </div>
+                            <h3 class="flex w-full items-center justify-between rounded-tr-xl bg-gradient-to-b from-murky-800 to-murky-800 px-2 py-2 text-base font-semibold leading-6 text-white sm:px-4">Ulasan</h3>
+                        </div>
+                        <div class="flow-root p-6">
+                            <div class="mx-6 flex items-center justify-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="h-8 w-8 flex-shrink-0 text-yellow-400"><path fill-rule="evenodd" d="M10.868 2.884c-.321-.772-1.415-.772-1.736 0l-1.83 4.401-4.753.381c-.833.067-1.171 1.107-.536 1.651l3.62 3.102-1.106 4.637c-.194.813.691 1.456 1.405 1.02L10 15.591l4.069 2.485c.713.436 1.598-.207 1.404-1.02l-1.106-4.637 3.62-3.102c.635-.544.297-1.584-.536-1.65l-4.752-.382-1.831-4.401z" clip-rule="evenodd"></path></svg>
+                                <div><span class="text-5xl text-besar" x-text="average_rating"></span> <span> / </span><span>5.0</span></div>
+                            </div>
+                            <div class="mx-6 mt-1 flex items-center justify-center text-xs font-bold"><span x-text="ulasan_s5"></span> pembeli merasa puas</div>
+                            <div class="mx-6 flex items-center justify-center gap-2 text-xs">Dari <span x-text="count_star"></span> Ulasan.</div>
+                            <div class="flex flex-col overflow-hidden pt-6">
+                                <template x-for="n in [5,4,3,2,1]" :key="n">
+                                    <ul class="rating-list" style="list-style-type:none;padding-left:0;">
+                                        <li class="rating-item" style="display:flex;align-items:center;margin-bottom:5px;">
+                                            <div class="rating-value" style="width:30px;text-align:right;margin-right:10px;" x-text="n"></div>
+                                            <div class="star-rating" style="display:flex;align-items:center;margin-right:10px;">
+                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" style="height:20px;width:20px;color:#ffc107;"><path fill-rule="evenodd" d="M10.868 2.884c-.321-.772-1.415-.772-1.736 0l-1.83 4.401-4.753.381c-.833.067-1.171 1.107-.536 1.651l3.62 3.102-1.106 4.637c-.194.813.691 1.456 1.405 1.02L10 15.591l4.069 2.485c.713.436 1.598-.207 1.404-1.02l-1.106-4.637 3.62-3.102c.635-.544.297-1.584-.536-1.65l-4.752-.382-1.831-4.401z" clip-rule="evenodd"></path></svg>
+                                            </div>
+                                            <div class="bar" style="flex-grow:1;height:10px;background-color:#ddd;border-radius:5px;overflow:hidden;">
+                                                <div class="progress" :style="'height:100%;background-color:#ffc107;border-radius:5px;width:' + starPct(n) + '%;'"></div>
+                                            </div>
+                                            <div class="count" style="width:50px;margin-left:0;text-align:right;" x-text="starCount(n)"></div>
+                                        </li>
+                                    </ul>
+                                </template>
+                            </div>
+                            <template x-if="reviews.length === 0">
+                                <div class="py-4 mt-3">
+                                    <div class="rounded-md border-l-4 border-yellow-400 bg-yellow-100 p-4">
+                                        <div class="flex"><div class="flex-shrink-0"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" class="h-5 w-5 text-yellow-500"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"></path></svg></div>
+                                        <div class="ml-3"><p class="text-sm text-yellow-700">Belum ada ulasan dan penilaian.</p></div></div>
+                                    </div>
+                                </div>
+                            </template>
+                            <div class="flow-root pt-5">
+                                <div class="-my-6 divide-y">
+                                    <template x-for="lann_testi in reviewsLimit()" :key="lann_testi.order_id">
+                                        <div class="py-3">
+                                            <div class="flex items-center">
+                                                <div class="w-full">
+                                                    <div class="flex items-start justify-between">
+                                                        <h4 class="mt-0.5 text-xs font-bold text-white" x-text="hideString(lann_testi.order_id)"></h4>
+                                                        <div class="flex items-center">
+                                                            <template x-for="i in Math.min(lann_testi.rating, 5)" :key="i">
+                                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="yellow" aria-hidden="true" class="h-4 w-4 flex-shrink-0 text-yellow-500"><path fill-rule="evenodd" d="M10.868 2.884c-.321-.772-1.415-.772-1.736 0l-1.83 4.401-4.753.381c-.833.067-1.171 1.107-.536 1.651l3.62 3.102-1.106 4.637c-.194.813.691 1.456 1.405 1.02L10 15.591l4.069 2.485c.713.436 1.598-.207 1.404-1.02l-1.106-4.637 3.62-3.102c.635-.544.297-1.584-.536-1.65l-4.752-.382-1.831-4.401z" clip-rule="evenodd"></path></svg>
+                                                            </template>
+                                                        </div>
+                                                    </div>
+                                                    <p class="sr-only">0 dari 5 bintang</p>
+                                                </div>
+                                            </div>
+                                            <div class="flex w-full justify-between pt-1 text-xxs">
+                                                <span x-text="lann_testi.name"></span>
+                                                <span x-text="lann_testi.date"></span>
+                                            </div>
+                                            <div class="text-murky-20 mt-1 space-y-6 text-xs italic">“<span x-text="lann_testi.message"></span>”</div>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                            <div class="flex justify-end pt-5 mt-5" x-show="reviews.length > 0">
+                                <a class="inline-flex items-center justify-center whitespace-nowrap text-xs font-medium border border-input hover:bg-accent/75 hover:text-accent-foreground h-8 rounded-md px-4 py-2 bg-secondary/50 pr-3 gap-2" type="button" href="/page/review" style="outline:none;">
+                                    <span>Lihat semua ulasan</span>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="container grid grid-cols-3 gap-8 pb-8 pt-8">
+                <div class="col-span-3 md:col-span-1">
+                    <div class="flex rounded-xl bg-dark-new3 px-3 py-1 gap-x-4 flex-grow flex-wrap">
+                        <div class="flex items-center justify-start gap-2 py-2">
+                            <span><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" style="color:#FFBC06;" class="h-4 w-4"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m0-10.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.75c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.57-.598-3.75h-.152c-3.196 0-6.1-1.249-8.25-3.286zm0 13.036h.008v.008H12v-.008z"></path></svg></span>
+                            <span class="whitespace-nowrap text-xs font-semibold text-base-color">Jaminan Layanan</span>
+                        </div>
+                        <div class="flex items-center justify-start gap-2 py-2">
+                            <span><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" style="color:#FFBC06;" class="h-4 w-4"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z"></path></svg></span>
+                            <span class="whitespace-nowrap text-xs font-semibold text-base-color">Jaminan Layanan 24 Jam</span>
+                        </div>
+                        <div class="flex items-center justify-start gap-2 py-2">
+                            <span><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" style="color:#FFBC06;" class="h-4 w-4"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z"></path></svg></span>
+                            <span class="whitespace-nowrap text-xs font-semibold text-base-color">Pembayaran Aman & Terpercaya</span>
+                        </div>
+                        <div class="flex items-center justify-start gap-2 py-2">
+                            <span><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" style="color:#FFBC06;" class="h-4 w-4"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z"></path></svg></span>
+                            <span class="whitespace-nowrap text-xs font-semibold text-base-color">Pesanan cepat & Otomatis</span>
+                        </div>
+                    </div>
+                    <button class="mt-4 flex w-full justify-between rounded-lg bg-dark-new3 px-4 py-2 text-left text-sm font-medium text-white duration-200 ease-in-out hover:bg-murky-700 focus:outline-none" id="toggleButton" type="button" @click="noteOpen = !noteOpen">
+                        <span>Catatan Pembelian</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="h-5 w-5 text-white" :class="noteOpen ? 'rotate-180 transform' : ''"><path fill-rule="evenodd" d="M14.77 12.79a.75.75 0 01-1.06-.02L10 8.832 6.29 12.77a.75.75 0 11-1.08-1.04l4.25-4.5a.75.75 0 011.08 0l4.25 4.5a.75.75 0 01-.02 1.06z" clip-rule="evenodd"></path></svg>
+                    </button>
+                    <div id="dropdownContent" class="pt-4 text-sm text-murky-200" x-show="noteOpen">
+                        <div class="rounded-lg bg-dark-new3 text-white p-4">
+                            <div class="prose-sm px-4 py-2 mt-2 pb-8 text-xs text-white sm:px-6" x-html="tryDecodeBase64(category.note)"></div>
+                            <template x-if="category.apk">
+                                <div class="mt-3 flex flex-col border-t border-dashed pt-3 text-card-foreground">
+                                    <h3 class="mb-3 text-sm">Download Aplikasi sekarang!</h3>
+                                    <div class="flex gap-2 items-center">
+                                        <a :href="`https://play.google.com/store/search?q=${category.name}`" target="_blank" rel="noopener noreferrer" style="outline: none;">
+                                            <img alt="" fetchpriority="high" width="120" height="40" decoding="async" data-nimg="1" src="/library/assets/guest/images/icon/google-play.png" style="color: transparent;">
+                                        </a>
+                                        <a :href="`https://www.apple.com/us/search/${category.name}?src=globalnav`" target="_blank" rel="noopener noreferrer" style="outline: none;">
+                                            <img alt="" fetchpriority="high" width="120" height="40" decoding="async" data-nimg="1" src="/library/assets/guest/images/icon/apple.png" style="color: transparent;">
+                                        </a>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-span-3 flex flex-col space-y-8 md:col-span-2">
+                    <!-- 1. Data Akun -->
+                    <div class="rounded-xl bg-dark-new3 shadow-2xl" id="section-input">
+                        <div class="flex border-b border-murky-600">
+                            <div class="flex items-center justify-center rounded-tl-xl bg-gradient-to-b from-primary-400 to-primary-600 px-3 py-2 text-xl font-semibold">1</div>
+                            <h3 class="flex w-full items-center justify-between rounded-tr-xl text-sm/6 bg-gradient-to-b from-murky-800 to-murky-800 px-2 py-2 text-base font-semibold leading-6 text-white sm:px-4">Masukkan Data Akun</h3>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4 p-4 sm:px-6 sm:pb-4">
+                            <template x-for="(field, idx) in formFields" :key="idx">
+                                <div>
+                                    <label class="block text-xs font-medium text-white pb-2" x-text="field.place"></label>
+                                    <div class="flex flex-col items-start">
+                                        <select x-show="field.input === 'server'" x-model="targetValues[idx]" class="PhoneInputInput relative block w-full appearance-none rounded-md border-0 bg-murky-200 px-3 py-2 text-xs text-murky-800 placeholder-murky-800 focus:z-10 focus:border-transparent focus:outline-none focus:ring-transparent focus:bg-white">
+                                            <template x-for="opt in (field.value || [])" :key="opt.value">
+                                                <option :value="opt.value" x-text="opt.name"></option>
+                                            </template>
+                                        </select>
+                                        <input x-show="field.input !== 'server'" x-model="targetValues[idx]" :type="field.input === 'number' ? 'number' : 'text'" class="PhoneInputInput relative block w-full appearance-none rounded-md border-0 bg-murky-200 px-3 py-2 text-xs text-murky-800 placeholder-murky-800 focus:z-10 focus:border-transparent focus:outline-none focus:ring-transparent focus:bg-white games-input" :placeholder="`Ketikan ${field.place}`" />
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                        <div class="px-4 pb-4 text-[10px] sm:px-6 sm:pb-6">
+                            <p><em x-text="tryDecodeBase64(category.target_note || '')"></em></p>
+                        </div>
+                    </div>
+
+                    <!-- 2. Pilih Nominal -->
+                    <div class="rounded-xl bg-dark-new3 shadow-2xl" id="section-nominal">
+                        <div class="flex border-b border-murky-600">
+                            <div class="flex items-center justify-center rounded-tl-xl bg-gradient-to-b from-primary-400 to-primary-600 px-3 py-2 text-xl font-semibold">2</div>
+                            <h3 class="flex w-full items-center justify-between rounded-tr-xl text-sm/6 bg-gradient-to-b from-murky-800 to-murky-800 px-2 py-2 text-base font-semibold leading-6 text-white sm:px-4">Pilih Nominal</h3>
+                        </div>
+                        <div class="flex flex-col space-y-4 p-4 sm:p-6" x-data="{ selectedPaket: 'all' }">
+                            <div class="scroll-container">
+                                <button @click="selectedPaket = 'all'" class="button-3d" :class="{ 'ring-2 ring-primary-500': selectedPaket === 'all' }">🛒 Semua Produk</button>
+                                <template x-for="v in variants" :key="v.name">
+                                    <button @click="selectedPaket = v.name" class="button-3d" :class="{ 'ring-2 ring-primary-500': selectedPaket === v.name }" x-text="v.name"></button>
+                                </template>
+                            </div>
+                            <div>
+                                <!-- Skeleton loader (mirror index.php) -->
+                                <div id="skeleton-loader" x-show="loading" class="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-2 lg:grid-cols-3">
+                                    <template x-for="i in 6" :key="i">
+                                        <div class="ph-item rounded-xl border border-transparent bg-murky-200 p-2.5 md:p-4">
+                                            <div class="ph-col-12">
+                                                <div class="ph-row">
+                                                    <div class="ph-picture" style="height:60px"></div>
+                                                    <div class="ph-row" style="height:14px;width:70%"></div>
+                                                    <div class="ph-row" style="height:14px;width:40%"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                                <template x-for="v in variants" :key="v.name">
+                                    <div x-show="!loading && (selectedPaket === 'all' || selectedPaket === v.name)" x-transition>
+                                        <h3 class="font-semibold mt-4" x-text="v.name"></h3>
+                                        <div class="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-2 lg:grid-cols-3" role="radiogroup">
+                                            <template x-for="svc in servicesFor(v.name)" :key="svc.id">
+                                                <div @click="selectProduct(svc)" class="relative flex product-list cursor-pointer rounded-xl border border-transparent bg-murky-200 p-2.5 shadow-sm outline-none md:p-4 hover:ring-2 hover:ring-primary-500 hover:ring-offset-2 hover:ring-offset-murky-800 duration-300 ease-in-out" role="radio" :aria-checked="selectedProduct && selectedProduct.id === svc.id ? 'true' : 'false'" :aria-labelledby="'svc-name-' + svc.id" :class="{ 'bg-white bj-shadow ring-2 ring-primary-500 ring-offset-2 ring-offset-murky-800': selectedProduct && selectedProduct.id === svc.id }">
+                                                    <input type="radio" :id="'nominal_' + svc.id" name="nominal" :value="svc.id" class="peer hidden" :checked="selectedProduct && selectedProduct.id === svc.id" />
+                                                    <span class="flex flex-1">
+                                                        <span class="flex flex-col justify-between">
+                                                            <span class="trunc block text-xs text-murky-800 font-semibold" :id="'svc-name-' + svc.id" x-text="svc.name"></span>
+                                                            <div>
+                                                                <span x-show="svc.discount <= 0" class="mt-1 flex items-center text-xs font-semibold text-murky-600 harga">Rp <span x-text="fmt(svc.show_price)"></span></span>
+                                                                <template x-if="svc.discount > 0">
+                                                                    <span>
+                                                                        <span class="mt-1 flex items-center text-xs font-semibold text-murky-600 harga">Rp <span x-text="fmt(svc.show_price)"></span></span>
+                                                                        <span class="flex items-center text-xs font-semibold italic line-through decoration-[0.9px] text-murky-600 decoration-destructive">Rp <span x-text="fmt(svc.price_tamu)"></span></span>
+                                                                    </span>
+                                                                </template>
+                                                            </div>
+                                                        </span>
+                                                        <template x-if="svc.discount > 0">
+                                                            <div class="w-[4rem] absolute aspect-square -top-[9px] -right-[9px] overflow-hidden rounded-sm">
+                                                                <div class="absolute top-0 left-0 bg-orange-700 h-2 w-2"></div>
+                                                                <div class="absolute bottom-0 right-0 bg-orange-700 h-2 w-2"></div>
+                                                                <div class="absolute block w-square-diagonal py-1 text-center text-xxs font-semibold uppercase bottom-0 right-0 rotate-45 origin-bottom-right shadow-sm bg-orange-500 text-foreground" x-text="Math.round((svc.discount / svc.price_tamu) * 100) + '% OFF'"></div>
+                                                            </div>
+                                                        </template>
+                                                    </span>
+                                                    <div class="flex aspect-square w-8 items-center">
+                                                        <img x-show="svc.image" :src="svc.image" :alt="svc.name" fetchpriority="high" width="192" height="350" decoding="async" data-nimg="1" class="object-contain object-right" sizes="80vh" style="color: transparent;">
+                                                    </div>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3. Metode Pembayaran -->
+                    <div class="rounded-xl bg-dark-new3 shadow-2xl" id="section-payment-channel">
+                        <div class="flex border-b border-murky-600">
+                            <div class="flex items-center justify-center rounded-tl-xl bg-gradient-to-b from-primary-400 to-primary-600 px-3 py-2 text-xl font-semibold">3</div>
+                            <h3 class="flex w-full items-center justify-between rounded-tr-xl text-sm/6 bg-gradient-to-b from-murky-800 to-murky-800 px-2 py-2 text-base font-semibold leading-6 text-white sm:px-4">Pilih Metode Pembayaran</h3>
+                        </div>
+                        <div class="flex w-full flex-col space-y-4 p-4 sm:p-6">
+                            <template x-for="pm in paymentMethods" :key="pm.code">
+                                <div @click="selectMethod(pm)" class="relative flex cursor-pointer method-list rounded-xl border border-transparent bg-murky-200 p-4 shadow-sm outline-none md:p-4 hover:ring-2 hover:ring-primary-500 hover:ring-offset-2 hover:ring-offset-murky-800 duration-300 ease-in-out" role="radio" :aria-checked="selectedMethod && selectedMethod.code === pm.code ? 'true' : 'false'" :class="{ 'bg-white bj-shadow ring-2 ring-primary-500 ring-offset-2 ring-offset-murky-800': selectedMethod && selectedMethod.code === pm.code }">
+                                    <input type="radio" :id="'method_' + pm.code" name="paymentMethod" :value="pm.code" class="peer hidden" :checked="selectedMethod && selectedMethod.code === pm.code" />
+                                    <label :for="'method_' + pm.code"></label>
+                                    <div class="flex items-center gap-2 max-w-xs">
+                                        <img :src="pm.image" :alt="pm.name" width="40" height="40" />
+                                        <div>
+                                            <span class="block font-bjcredits text-xs font-semibold text-murky-800 sm:text-sm" x-text="pm.name"></span>
+                                            <p class="block text-xxs text-murky-800 sm:text-xs" x-text="methodPrice(pm)"></p>
+                                        </div>
+                                    </div>
+                                    <div class="flex aspect-square w-8 items-center" x-show="pm.best_price">
+                                        <div class="w-[4rem] absolute aspect-square -top-[9px] -right-[9px] overflow-hidden rounded-sm">
+                                            <div class="absolute top-0 left-0 bg-orange-500 h-2 w-2"></div>
+                                            <div class="absolute bottom-0 right-0 bg-orange-500 h-2 w-2"></div>
+                                            <div class="absolute block w-square-diagonal py-1 text-center text-xxs font-semibold uppercase bottom-0 right-0 rotate-45 origin-bottom-right shadow-sm bg-orange-500 text-white">BEST PRICE</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <!-- Voucher -->
+                    <div class="rounded-xl bg-dark-new3 shadow-2xl" id="promooo">
+                        <div class="flex border-b border-murky-600">
+                            <div class="flex items-center justify-center rounded-tl-xl bg-gradient-to-b from-primary-400 to-primary-600 px-3 py-2 text-xl font-semibold">4</div>
+                            <h3 class="flex w-full items-center justify-between rounded-tr-xl text-sm/6 bg-gradient-to-b from-murky-800 to-murky-800 px-2 py-2 text-base font-semibold leading-6 text-white sm:px-4">Kode Promo</h3>
+                        </div>
+                        <div class="p-4 sm:px-6 sm:pb-6">
+                            <label for="voucher" class="block text-xs font-medium text-white pb-2"></label>
+                            <div class="flex items-center space-x-2">
+                                <div class="grow">
+                                    <div class="flex flex-col items-start">
+                                        <input x-model="voucher" id="voucher" name="voucher" class="PhoneInputInput relative block w-full appearance-none rounded-md border-0 bg-murky-200 px-3 py-2 text-xs text-murky-800 placeholder-murky-800 focus:z-10 focus:border-transparent focus:outline-none focus:ring-transparent focus:bg-white" type="text" placeholder="Kode Promo" required />
+                                    </div>
+                                </div>
+                                <button type="button" id="btn-voucher-check" @click="checkVoucher" class="flex items-center justify-center rounded-md bg-primary-500 py-2 px-4 text-xs font-semibold text-white hover:bg-orange-400 disabled:cursor-not-allowed disabled:opacity-75" :disabled="!voucher || voucherChecking" x-text="voucherChecking ? 'Memeriksa...' : 'Gunakan'"></button>
+                            </div>
+                            <div class="pt-2 text-xs text-red-500" x-show="voucherError" x-text="voucherError"></div>
+                            <div class="pt-2 text-xs text-green-500" x-show="voucherApplied" x-text="'Voucher diterapkan: -Rp ' + fmt(voucherDiscount)"></div>
+                        </div>
+                    </div>
+
+                    <!-- WhatsApp -->
+                    <div class="rounded-xl bg-dark-new3 shadow-2xl" id="whatsappp">
+                        <div class="flex border-b border-murky-600">
+                            <div class="flex items-center justify-center rounded-tl-xl bg-gradient-to-b from-primary-400 to-primary-600 px-3 py-2 text-xl font-semibold">5</div>
+                            <h3 class="flex w-full items-center justify-between rounded-tr-xl text-sm/6 bg-gradient-to-b from-murky-800 to-murky-800 px-2 py-2 text-base font-semibold leading-6 text-white sm:px-4">No. WhatsApp</h3>
+                        </div>
+                        <div class="p-4 sm:px-6">
+                            <label for="nomor" class="block text-xs font-medium text-white pb-2">No. WhatsApp</label>
+                            <input type="number" id="nomor" autocomplete="off" x-model="phone" placeholder="08xxxx" class="PhoneInputInput relative block w-full appearance-none rounded-md border-0 bg-murky-200 px-3 py-2 text-xs text-murky-800 placeholder-murky-800 focus:z-10 focus:border-transparent focus:outline-none focus:ring-transparent focus:bg-white" />
+                            <span class="text-xxs italic">**Nomor ini akan dihubungi jika terjadi masalah</span>
+                        </div>
+                    </div>
+
+                    <!-- Order -->
+                    <button @click="openConfirm" class="inline-flex items-center justify-center rounded-md bg-primary-500 px-4 py-2 text-sm font-medium text-white duration-300 hover:bg-primary-500 disabled:cursor-not-allowed disabled:opacity-75 btn-order relative flex w-full gap-2 overflow-hidden mb-3" type="button" id="order-check">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-shopping-bag h-4 w-4"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"></path><path d="M3 6h18"></path><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
+                        <span>Pesan Sekarang</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Confirm Modal -->
+            <div class="popup-structure popup-slide flex min-h-full items-center justify-center p-4 text-center sm:p-0" id="popupppp" :class="{ 'show': confirmOpen }" x-cloak>
+                <div class="fixed inset-0 z-10 overflow-y-auto">
+                    <div class="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
+                        <div class="relative w-full transform overflow-hidden rounded-lg bg-murky-900 text-left shadow-xl transition-all sm:my-8 sm:max-w-3xl !rounded-2xl opacity-100 translate-y-0 sm:scale-100" id="headlessui-dialog-panel-weekly-diamond-pass" data-headlessui-state="open">
+                            <div class="w-full pb-4 flex flex-col items-center justify-center">
+                                <h2 class="max-w-xl pt-1 text-center text-sm font-semibold text-white mt-4">KONFIRMASI PEMBELIAN</h2>
+                                <small class="text-center">Pastikan data yang Anda berikan sudah benar</small>
+                                <div class="w-full max-w-none prose prose-sm px-4 py-4 text-xs text-white flex items-center justify-center">
+                                    <div class="border-murky-600 prose prose-sm flex w-full flex-col rounded-xl border border-dashed px-4 py-3 text-xs text-foreground prose-p:my-0">
+                                        <div class="shelf"><div class="labelbox">Tujuan : </div><div class="valuebox" x-text="targetText"></div></div>
+                                        <div class="shelf" x-show="nickname"><div class="labelbox">Nickname : </div><div class="valuebox" x-text="nickname"></div></div>
+                                        <div class="shelf"><div class="labelbox">Produk : </div><div class="valuebox" x-text="category.name"></div></div>
+                                        <div class="shelf"><div class="labelbox">Item : </div><div class="valuebox" x-text="selectedProduct ? selectedProduct.name : '-'"></div></div>
+                                        <div class="shelf"><div class="labelbox">Harga : </div><div class="valuebox" x-text="selectedProduct ? 'Rp ' + fmt(totalPay) : '-'"></div></div>
+                                        <div class="shelf"><div class="labelbox">Pembayaran : </div><div class="valuebox" x-text="selectedMethod ? selectedMethod.name : '-'"></div></div>
+                                    </div>
+                                </div>
+                                <div class="flex justify-center align-center gap-2 px-4 py-2 rounded-xl">
+                                    <button type="button" class="px-4 py-2 rounded-md bg-murky-700 whitespace-nowrap text-xs font-medium" id="btn-confirm" @click="orderProcess" x-text="submitting ? 'Memproses...' : 'Konfirmasi'"></button>
+                                    <button type="button" class="px-4 py-2 rounded-md bg-murky-700 whitespace-nowrap text-xs font-medium" @click="confirmOpen = false">Batalkan</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="site-footer"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
+    <script src="/assets/js/layout.js"></script>
+    <script src="/assets/js/app-data.js"></script>
+    <script>
+        function orderData() {
+            return Object.assign(layoutData(), {
+                category: {},
+                services: [],
+                variants: [],
+                formFields: [],
+                targetValues: [],
+                selectedProduct: null,
+                selectedMethod: null,
+                paymentMethods: [],
+                phone: '',
+                voucher: '',
+                nickname: '',
+                noteOpen: false,
+                confirmOpen: false,
+                submitting: false,
+                loading: true,
+                reviews: [],
+                voucherChecking: false,
+                voucherError: '',
+                voucherApplied: false,
+                voucherDiscount: 0,
+                initOrder() {
+                    this.loadConfig();
+                    const parts = window.location.pathname.split('/').filter(Boolean);
+                    // /product/{type}/category/{slug}
+                    const type = parts[1] || '';
+                    const slug = parts[3] || '';
+                    fetchJSON(`/api/v1/product/${type}/${slug}`)
+                        .then(data => {
+                            if (!data.result) { window.location.href = '/'; return; }
+                            this.category = data.data;
+                            this.services = data.data.services || [];
+                            this.formFields = (data.data.data_form || []).map(f => ({
+                                place: f.place || f.label || '',
+                                input: f.input || 'text',
+                                value: f.value || []
+                            }));
+                            this.targetValues = this.formFields.map(f => (f.value && f.value.length) ? f.value[0].value : '');
+                            const vmap = {};
+                            this.services.forEach(s => {
+                                const v = s.sub || 'Semua Produk';
+                                if (!vmap[v]) vmap[v] = true;
+                            });
+                            this.variants = Object.keys(vmap).map(n => ({ name: n }));
+                            this.loadPaymentMethods();
+                            this.loadReviews();
+                            this.loading = false;
+                        })
+                        .catch(() => { window.location.href = '/'; });
+                    const saved = localStorage.getItem('savedNumber');
+                    if (saved) this.phone = saved;
+                },
+                loadReviews() {
+                    fetchJSON('/api/v1/reviews')
+                        .then(data => { this.reviews = data.data || []; })
+                        .catch(err => console.error('Gagal muat ulasan', err));
+                },
+                loadPaymentMethods() {
+                    fetchJSON('/api/v1/payment-methods')
+                        .then(data => { this.paymentMethods = data.data || []; })
+                        .catch(err => console.error('Gagal muat metode', err));
+                },
+                checkVoucher() {
+                    if (!this.voucher) return;
+                    this.voucherChecking = true;
+                    this.voucherError = '';
+                    fetchJSON('/api/v1/voucher/check', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ code: this.voucher, price: this.selectedProduct ? this.selectedProduct.show_price : 0 })
+                    })
+                        .then(res => {
+                            this.voucherChecking = false;
+                            if (res.result) {
+                                this.voucherApplied = true;
+                                this.voucherDiscount = res.discount || 0;
+                            } else {
+                                this.voucherApplied = false;
+                                this.voucherError = res.message || 'Kode voucher tidak valid';
+                            }
+                        })
+                        .catch(() => {
+                            this.voucherChecking = false;
+                            this.voucherError = 'Kode voucher tidak valid';
+                        });
+                },
+                get average_rating() {
+                    if (!this.reviews.length) return '0.0';
+                    const sum = this.reviews.reduce((a, r) => a + (r.rating || 0), 0);
+                    return (sum / this.reviews.length).toFixed(1);
+                },
+                get count_star() { return this.reviews.length; },
+                get ulasan_s5() {
+                    if (!this.reviews.length) return 0;
+                    const s5 = this.reviews.filter(r => r.rating >= 4).length;
+                    return Math.round((s5 / this.reviews.length) * 100);
+                },
+                starCount(n) { return this.reviews.filter(r => r.rating === n).length; },
+                starPct(n) {
+                    if (!this.reviews.length) return 0;
+                    return Math.round((this.starCount(n) / this.reviews.length) * 100);
+                },
+                reviewsLimit() { return this.reviews.slice(0, 5); },
+                servicesFor(variant) {
+                    if (!variant || variant === 'Semua Produk') return this.services;
+                    return this.services.filter(s => (s.sub || 'Semua Produk') === variant);
+                },
+                selectProduct(svc) {
+                    this.selectedProduct = svc;
+                    document.getElementById('section-payment-channel').scrollIntoView({ behavior: 'smooth' });
+                },
+                selectMethod(pm) {
+                    this.selectedMethod = pm;
+                },
+                methodPrice(pm) {
+                    if (!this.selectedProduct) return 'Pilih item dahulu';
+                    const price = this.selectedProduct.show_price;
+                    const fee = pm.fee_type === '+' ? pm.flat : Math.ceil(price * pm.percent) + pm.flat;
+                    const total = pm.fee_using === 'merchant' ? price : price + fee;
+                    if (total < pm.min) return 'Min. Rp ' + fmt(pm.min);
+                    if (total > pm.max) return 'Max. Rp ' + fmt(pm.max);
+                    if (pm.code === 'APP') return 'Anda belum login';
+                    return 'Rp ' + fmt(total);
+                },
+                get totalPay() {
+                    if (!this.selectedProduct || !this.selectedMethod) return 0;
+                    const price = this.selectedProduct.show_price;
+                    const fee = this.selectedMethod.fee_type === '+' ? this.selectedMethod.flat : Math.ceil(price * this.selectedMethod.percent) + this.selectedMethod.flat;
+                    const total = this.selectedMethod.fee_using === 'merchant' ? price : price + fee;
+                    return Math.max(0, total - this.voucherDiscount);
+                },
+                get targetText() {
+                    return this.targetValues.filter(v => v !== '' && v !== undefined).join(' - ');
+                },
+                openConfirm() {
+                    if (!this.selectedProduct) { alert('Silakan pilih produk dahulu'); return; }
+                    if (!this.selectedMethod) { alert('Silakan pilih metode pembayaran'); return; }
+                    if (!this.targetText || this.targetText === ' - ') { alert('Data tujuan tidak boleh kosong'); return; }
+                    this.confirmOpen = true;
+                },
+                orderProcess() {
+                    if (this.submitting) return;
+                    this.submitting = true;
+                    fetchJSON('/api/v1/order/submit', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            product: this.selectedProduct.id,
+                            method: this.selectedMethod.code,
+                            target: this.targetText,
+                            nickname: this.nickname,
+                            whaphone: this.phone,
+                            voucher: this.voucher || ''
+                        })
+                    })
+                        .then(res => {
+                            this.submitting = false;
+                            this.confirmOpen = false;
+                            if (res.result) {
+                                window.location.href = '/invoices/' + res.order_id;
+                            } else {
+                                alert(res.message || 'Terjadi kesalahan');
+                            }
+                        })
+                        .catch(err => {
+                            this.submitting = false;
+                            alert('Terjadi kesalahan, coba lagi');
+                            console.error(err);
+                        });
+                }
+            });
+        }
+    </script>
+</body>
+</html>

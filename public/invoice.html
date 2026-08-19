@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="dark">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0, minimal-ui">
+    <meta content="Aruteru Shoppu Top Up Game" name="description">
+    <meta content="Top up game murah" name="keyword">
+    <meta name="author" content="Sahabat Store x DhaMus">
+    <title>Cek Invoice — Aruteru Shoppu</title>
+    <link rel="shortcut icon" href="/imagehome/Footeraru.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="/library/assets/guest/css/e00de8768e0e97d0dsddd0b0.css">
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/placeholder-loading/dist/css/placeholder-loading.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="/library/assets/guest/css/header.css">
+    <link rel="stylesheet" href="/library/assets/guest/css/mobile-menu.css">
+    <link rel="stylesheet" href="/library/assets/guest/css/e00de8768e0e97d0dsddd0bb.css">
+    <link rel="stylesheet" href="/library/assets/guest/css/app.css">
+    <link rel="stylesheet" href="/library/assets/guest/css/home.css">
+    <link rel="stylesheet" href="/library/assets/guest/css/order.css">
+    <link rel="stylesheet" href="/library/assets/guest/css/footer.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        murky: {
+                            200: '#e2e8f0',
+                            300: '#cbd5e1',
+                            400: '#94a3b8',
+                            500: '#64748b',
+                            600: '#475569',
+                            700: '#334155',
+                            800: '#1e293b',
+                            900: '#0f172a',
+                        },
+                        'dark-new3': '#182232',
+                        melpa: {
+                            100: '#1e293b',
+                        },
+                        primary: {
+                            400: '#818cf8',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        :root {
+            --warna_1: #1e293b;
+            --warna_2: #0f172a;
+            --warna_3: #6366f1;
+            --warna_4: #334155;
+            --primary-500: #6366f1;
+            --murky-700-hover: #334155;
+        }
+        :root[data-theme="light"] {
+            --warna_1: #ffffff;
+            --warna_2: #f8f9fa;
+            --warna_3: #007bff;
+            --warna_4: #e9ecef;
+            --primary-500: #007bff;
+            --murky-700-hover: #dee2e6;
+            --text-color: #343a40;
+            --bg-color: #ffffff;
+        }
+        :root[data-theme="dark"] {
+            --warna_1: #1e293b;
+            --warna_2: #0f172a;
+            --warna_3: #6366f1;
+            --warna_4: #334155;
+            --primary-500: #007bff;
+            --murky-700-hover: #334155;
+            --text-color: #ffffff;
+            --menu-text: #ffffff;
+            --bg-color: #0f172a;
+        }
+        [x-cloak] { display: none !important; }
+        .desktop-nav-link, .mobile-nav-link { font-size: 12px; padding: 0.3rem 0.4rem; display: inline-flex; align-items: center; gap: 0.25rem; color: white; font-weight: 500; }
+        [data-theme="dark"] .desktop-nav-link { color: white; font-weight: 500; }
+        [data-theme="light"] .desktop-nav-link { color: #000000; font-weight: 600; }
+    </style>
+    <script defer src="//cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body class="text-white antialiased bg-[#0f172a]" data-aruteru-layout>
+    <div id="site-header"></div>
+
+    <main class="relative">
+        <div id="app" x-data="invoiceData()" x-init="initInvoice()">
+            <div class="container px-4 sm:px-6 lg:px-8 mx-auto">
+                <div class="text-center mt-8 sm:mt-16 mb-8 sm:mb-12">
+                    <h1 class="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-2 sm:mb-3 px-4">Cek Invoice Kamu dengan Mudah dan Cepat.</h1>
+                    <p class="text-base sm:text-lg text-gray-400 px-4">Lihat detail pembelian kamu menggunakan nomor Invoice.</p>
+                </div>
+
+                <div class="max-w-xl lg:max-w-2xl mx-auto px-4">
+                    <div class="bg-murky-800/50 backdrop-blur rounded-xl p-4 sm:p-8 shadow-lg border border-white/10">
+                        <p class="text-white mb-4 sm:mb-6">Cari detail pembelian kamu disini</p>
+                        <form @submit.prevent="searchInvoice" class="space-y-4 sm:space-y-6">
+                            <div class="relative flex items-center">
+                                <input type="text" x-model="oid" class="w-full rounded-lg bg-black border border-gray-200 text-black font-bold pl-4 pr-12 py-2.5 sm:py-3 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/50 transition-all placeholder-gray-500" placeholder="Masukkan nomor invoice kamu" required>
+                                <button type="button" class="absolute right-0 h-full px-3 flex items-center justify-center text-gray-400 hover:text-white transition-colors border-l border-white/10" @click="copyToClipboard">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="opacity-75"><path d="M8 4H6a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>
+                                </button>
+                            </div>
+                            <button type="submit" class="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-lg py-2.5 sm:py-3 text-xs sm:text-sm font-medium hover:from-orange-600 hover:to-orange-700 transition-all duration-200 shadow-lg shadow-orange-500/25">
+                                Cari Invoice
+                            </button>
+                        </form>
+                        <div x-show="error" x-cloak class="mt-4 text-center text-sm text-red-400" x-text="error"></div>
+                    </div>
+                </div>
+
+                <div class="mt-12 sm:mt-20">
+                    <div class="text-center mb-6 sm:mb-10 px-4">
+                        <h2 class="text-xl sm:text-2xl font-bold text-white mb-2 sm:mb-3">Transaksi Real-time</h2>
+                        <p class="text-sm sm:text-base text-gray-400">Berikut ini Real-time data pesanan masuk terbaru SahabatStore.</p>
+                    </div>
+                    <div class="bg-murky-800/50 backdrop-blur rounded-xl border border-white/10 overflow-hidden shadow-lg mx-4">
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead>
+                                    <tr class="border-b border-white/10">
+                                        <th class="text-left text-xs font-medium text-gray-400 px-4 sm:px-6 py-3 sm:py-4">Tanggal</th>
+                                        <th class="text-left text-xs font-medium text-gray-400 px-4 sm:px-6 py-3 sm:py-4">Nomor Invoice</th>
+                                        <th class="hidden sm:table-cell text-left text-xs font-medium text-gray-400 px-4 sm:px-6 py-3 sm:py-4">No. Handphone</th>
+                                        <th class="text-left text-xs font-medium text-gray-400 px-4 sm:px-6 py-3 sm:py-4">Harga</th>
+                                        <th class="text-left text-xs font-medium text-gray-400 px-4 sm:px-6 py-3 sm:py-4">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-white/5">
+                                    <template x-for="trx in transactions" :key="trx.order_id">
+                                        <tr class="hover:bg-white/5 transition-colors">
+                                            <td class="px-4 sm:px-6 py-3 sm:py-4 text-xs text-gray-400" x-text="formatDate(trx.created_at)"></td>
+                                            <td class="px-4 sm:px-6 py-3 sm:py-4">
+                                                <div class="text-xs sm:text-sm text-white font-medium">
+                                                    <a :href="'/invoices/' + trx.order_id" class="hover:underline" x-text="hideString(trx.order_id)"></a>
+                                                </div>
+                                            </td>
+                                            <td class="hidden sm:table-cell px-4 sm:px-6 py-3 sm:py-4 text-xs text-slate-300" x-text="trx.target || '-'"></td>
+                                            <td class="px-4 sm:px-6 py-3 sm:py-4 text-xs text-white font-medium" x-text="'Rp ' + fmt(trx.price)"></td>
+                                            <td class="px-4 sm:px-6 py-3 sm:py-4">
+                                                <span class="px-2 sm:px-3 py-1 rounded-full text-xs font-medium border whitespace-nowrap" :class="statusClass(trx.status)" x-text="statusLabel(trx.status)"></span>
+                                            </td>
+                                        </tr>
+                                    </template>
+                                    <template x-if="transactions.length === 0">
+                                        <tr><td colspan="5" class="px-6 py-8 text-center text-sm text-gray-400">Belum ada transaksi</td></tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="site-footer"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
+    <script src="/assets/js/layout.js"></script>
+    <script src="/assets/js/app-data.js"></script>
+    <script>
+        function invoiceData() {
+            return Object.assign(layoutData(), {
+                oid: '',
+                error: '',
+                transactions: [],
+                initInvoice() {
+                    this.loadConfig();
+                    fetchJSON('/api/v1/invoices')
+                        .then(data => { this.transactions = data.data || []; })
+                        .catch(err => console.error('Gagal muat transaksi', err));
+                },
+                searchInvoice() {
+                    if (!this.oid.trim()) { this.error = 'Masukkan nomor invoice'; return; }
+                    fetchJSON('/api/v1/invoice/' + encodeURIComponent(this.oid.trim()))
+                        .then(res => {
+                            if (res.result) {
+                                window.location.href = '/invoices/' + this.oid.trim();
+                            } else {
+                                this.error = 'Pesanan tidak ditemukan.';
+                            }
+                        })
+                        .catch(() => { this.error = 'Pesanan tidak ditemukan.'; });
+                },
+                copyToClipboard() {
+                    if (!this.oid) return;
+                    navigator.clipboard.writeText(this.oid).catch(() => {});
+                },
+                statusClass(s) {
+                    const map = { success: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20', pending: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20', process: 'bg-blue-500/10 text-blue-400 border-blue-500/20', system: 'bg-blue-500/10 text-blue-400 border-blue-500/20', error: 'bg-red-500/10 text-red-400 border-red-500/20' };
+                    return map[s] || 'bg-slate-500/10 text-slate-400 border-slate-500/20';
+                },
+                statusLabel(s) {
+                    const map = { success: 'Sukses', pending: 'Menunggu', process: 'Diproses', system: 'Sistem', error: 'Gagal' };
+                    return map[s] || s;
+                },
+                formatDate(d) {
+                    if (!d) return '-';
+                    try { return new Date(d.replace(' ', 'T')).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }); } catch (e) { return d; }
+                }
+            });
+        }
+    </script>
+</body>
+</html>

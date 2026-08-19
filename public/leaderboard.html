@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="dark">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0, minimal-ui">
+    <meta content="Aruteru Shoppu Top Up Game" name="description">
+    <meta content="Top up game murah" name="keyword">
+    <meta name="author" content="Sahabat Store x DhaMus">
+    <title>Leaderboard — Aruteru Shoppu</title>
+    <link rel="shortcut icon" href="/imagehome/Footeraru.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="/library/assets/guest/css/e00de8768e0e97d0dsddd0b0.css">
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/placeholder-loading/dist/css/placeholder-loading.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="/library/assets/guest/css/header.css">
+    <link rel="stylesheet" href="/library/assets/guest/css/mobile-menu.css">
+    <link rel="stylesheet" href="/library/assets/guest/css/e00de8768e0e97d0dsddd0bb.css">
+    <link rel="stylesheet" href="/library/assets/guest/css/app.css">
+    <link rel="stylesheet" href="/library/assets/guest/css/home.css">
+    <link rel="stylesheet" href="/library/assets/guest/css/footer.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        murky: {
+                            200: '#e2e8f0',
+                            300: '#cbd5e1',
+                            400: '#94a3b8',
+                            500: '#64748b',
+                            600: '#475569',
+                            700: '#334155',
+                            800: '#1e293b',
+                            900: '#0f172a',
+                        },
+                        'dark-new3': '#182232',
+                        melpa: {
+                            100: '#1e293b',
+                        },
+                        primary: {
+                            400: '#818cf8',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        :root {
+            --warna_1: #1e293b;
+            --warna_2: #0f172a;
+            --warna_3: #6366f1;
+            --warna_4: #334155;
+            --primary-500: #6366f1;
+            --murky-700-hover: #334155;
+        }
+        :root[data-theme="light"] {
+            --warna_1: #ffffff;
+            --warna_2: #f8f9fa;
+            --warna_3: #007bff;
+            --warna_4: #e9ecef;
+            --primary-500: #007bff;
+            --murky-700-hover: #dee2e6;
+            --text-color: #343a40;
+            --bg-color: #ffffff;
+        }
+        :root[data-theme="dark"] {
+            --warna_1: #1e293b;
+            --warna_2: #0f172a;
+            --warna_3: #6366f1;
+            --warna_4: #334155;
+            --primary-500: #007bff;
+            --murky-700-hover: #334155;
+            --text-color: #ffffff;
+            --menu-text: #ffffff;
+            --bg-color: #0f172a;
+        }
+        [x-cloak] { display: none !important; }
+        .desktop-nav-link, .mobile-nav-link { font-size: 12px; padding: 0.3rem 0.4rem; display: inline-flex; align-items: center; gap: 0.25rem; color: white; font-weight: 500; }
+        [data-theme="dark"] .desktop-nav-link { color: white; font-weight: 500; }
+        [data-theme="light"] .desktop-nav-link { color: #000000; font-weight: 600; }
+        .leaderboard-container { max-width: 1200px; margin: 2rem auto; padding: 20px; background: rgba(255,255,255,0.02); border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+        .leaderboard-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 2rem; }
+        .leaderboard-box { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 15px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+        .leaderboard-box-header { font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem; text-align: center; color: #fff; }
+        .leaderboard-list { list-style: none; padding: 0; margin: 0; }
+        .leaderboard-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; margin: 8px 0; border-radius: 8px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 2px 8px rgba(0,0,0,0.2); transition: transform 0.2s; }
+        .leaderboard-item:hover { transform: translateY(-2px); }
+        .leaderboard-item[data-rank="1"] { background: linear-gradient(135deg, rgba(255,215,0,0.15), rgba(0,0,0,0.3)); border-color: rgba(255,215,0,0.3); }
+        .leaderboard-item[data-rank="2"] { background: linear-gradient(135deg, rgba(192,192,192,0.15), rgba(0,0,0,0.3)); }
+        .leaderboard-item[data-rank="3"] { background: linear-gradient(135deg, rgba(205,127,50,0.15), rgba(0,0,0,0.3)); }
+        .rank { min-width: 30px; text-align: right; padding-right: 10px; font-weight: bold; color: #fff; }
+        .leaderboard-item[data-rank="1"] .rank { color: #ffd700; }
+        .leaderboard-item[data-rank="2"] .rank { color: #c0c0c0; }
+        .leaderboard-item[data-rank="3"] .rank { color: #cd7f32; }
+        .username { flex: 1; min-width: 0; padding-right: 10px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .verified { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; background: #3b82f6; border-radius: 50%; color: #fff; font-size: 10px; margin-left: 6px; }
+        .amount { flex-shrink: 0; color: #2ecc71; font-weight: 500; text-align: right; }
+        @media (max-width: 768px) { .leaderboard-tabs { grid-template-columns: 1fr; } }
+    </style>
+    <script defer src="//cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body class="text-white antialiased bg-[#0f172a]" data-aruteru-layout>
+    <div id="site-header"></div>
+    <main class="relative">
+        <div id="app" x-data="leaderboardData()" x-init="initLeaderboard()">
+            <div class="leaderboard-container">
+                <div class="leaderboard-header">
+                    <h1 class="text-4xl font-bold mb-2">Top 10 Pembelian Terbanyak di Aruteru Shoppu</h1>
+                    <p class="text-gray-400">Berikut ini adalah daftar pembelian terbanyak dari para pelanggan setia Aruteru Shoppu.</p>
+                </div>
+                <div class="leaderboard-tabs">
+                    <div class="leaderboard-box">
+                        <div class="leaderboard-box-header">Top 3 - Hari Ini</div>
+                        <ul class="leaderboard-list">
+                            <template x-for="(row, i) in data.daily" :key="i">
+                                <li class="leaderboard-item" :data-rank="i + 1">
+                                    <span class="rank" x-text="i + 1"></span>
+                                    <span class="username" x-text="row.user"></span>
+                                    <span class="verified" x-show="row.user && row.user !== 'Anonim'"><i class="fa fa-check"></i></span>
+                                    <span class="amount" x-text="'Rp ' + fmt(row.total_spent)"></span>
+                                </li>
+                            </template>
+                            <li x-show="data.daily.length === 0" class="leaderboard-item"><span class="username text-gray-500">Belum ada transaksi hari ini</span></li>
+                        </ul>
+                    </div>
+                    <div class="leaderboard-box">
+                        <div class="leaderboard-box-header">Top 5 - Minggu Ini</div>
+                        <ul class="leaderboard-list">
+                            <template x-for="(row, i) in data.weekly" :key="i">
+                                <li class="leaderboard-item" :data-rank="i + 1">
+                                    <span class="rank" x-text="i + 1"></span>
+                                    <span class="username" x-text="row.user"></span>
+                                    <span class="verified" x-show="row.user && row.user !== 'Anonim'"><i class="fa fa-check"></i></span>
+                                    <span class="amount" x-text="'Rp ' + fmt(row.total_spent)"></span>
+                                </li>
+                            </template>
+                            <li x-show="data.weekly.length === 0" class="leaderboard-item"><span class="username text-gray-500">Belum ada transaksi minggu ini</span></li>
+                        </ul>
+                    </div>
+                    <div class="leaderboard-box">
+                        <div class="leaderboard-box-header">Top 10 - Bulan Ini</div>
+                        <ul class="leaderboard-list">
+                            <template x-for="(row, i) in data.monthly" :key="i">
+                                <li class="leaderboard-item" :data-rank="i + 1">
+                                    <span class="rank" x-text="i + 1"></span>
+                                    <span class="username" x-text="row.user"></span>
+                                    <span class="verified" x-show="row.user && row.user !== 'Anonim'"><i class="fa fa-check"></i></span>
+                                    <span class="amount" x-text="'Rp ' + fmt(row.total_spent)"></span>
+                                </li>
+                            </template>
+                            <li x-show="data.monthly.length === 0" class="leaderboard-item"><span class="username text-gray-500">Belum ada transaksi bulan ini</span></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    <div id="site-footer"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
+    <script src="/assets/js/layout.js"></script>
+    <script src="/assets/js/app-data.js"></script>
+    <script>
+        function leaderboardData() {
+            return Object.assign(layoutData(), {
+                data: { daily: [], weekly: [], monthly: [] },
+                initLeaderboard() {
+                    this.loadConfig();
+                    fetchJSON('/api/v1/leaderboard')
+                        .then(res => { this.data = res.data || { daily: [], weekly: [], monthly: [] }; })
+                        .catch(err => console.error('Gagal muat leaderboard', err));
+                }
+            });
+        }
+    </script>
+</body>
+</html>

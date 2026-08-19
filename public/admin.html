@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="dark">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0, minimal-ui">
+    <meta content="Aruteru Shoppu Top Up Game" name="description">
+    <meta content="Top up game murah" name="keyword">
+    <meta name="author" content="Sahabat Store x DhaMus">
+    <title>Admin Panel — Aruteru Shoppu</title>
+    <link rel="shortcut icon" href="/imagehome/Footeraru.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="/library/assets/guest/css/e00de8768e0e97d0dsddd0b0.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        murky: {
+                            200: '#e2e8f0',
+                            300: '#cbd5e1',
+                            400: '#94a3b8',
+                            500: '#64748b',
+                            600: '#475569',
+                            700: '#334155',
+                            800: '#1e293b',
+                            900: '#0f172a',
+                        },
+                        'dark-new3': '#182232',
+                        melpa: {
+                            100: '#1e293b',
+                        },
+                        primary: {
+                            400: '#818cf8',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        :root {
+            --warna_1: #1e293b;
+            --warna_2: #0f172a;
+            --warna_3: #6366f1;
+            --warna_4: #334155;
+            --primary-500: #6366f1;
+            --murky-700-hover: #334155;
+        }
+        :root[data-theme="light"] {
+            --warna_1: #ffffff;
+            --warna_2: #f8f9fa;
+            --warna_3: #007bff;
+            --warna_4: #e9ecef;
+            --primary-500: #007bff;
+            --murky-700-hover: #dee2e6;
+            --text-color: #343a40;
+            --bg-color: #ffffff;
+        }
+        :root[data-theme="dark"] {
+            --warna_1: #1e293b;
+            --warna_2: #0f172a;
+            --warna_3: #6366f1;
+            --warna_4: #334155;
+            --primary-500: #007bff;
+            --murky-700-hover: #334155;
+            --text-color: #ffffff;
+            --menu-text: #ffffff;
+            --bg-color: #0f172a;
+        }
+        [x-cloak] { display: none !important; }
+        .desktop-nav-link, .mobile-nav-link { font-size: 12px; padding: 0.3rem 0.4rem; display: inline-flex; align-items: center; gap: 0.25rem; color: white; font-weight: 500; }
+        [data-theme="dark"] .desktop-nav-link { color: white; font-weight: 500; }
+        [data-theme="light"] .desktop-nav-link { color: #000000; font-weight: 600; }
+        .admin-sidebar a.active { background: rgba(99, 102, 241, 0.2); color: #fff; border-left: 3px solid #6366f1; }
+    </style>
+    <script defer src="//cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body class="text-white antialiased bg-[#0f172a]" data-aruteru-layout>
+    <div id="site-header"></div>
+    <main class="relative">
+        <div id="app" x-data="adminData()" x-init="initAdmin()">
+            <div x-show="!isAdmin" x-cloak class="container py-24 text-center">
+                <h2 class="text-2xl font-bold mb-4">Akses ditolak</h2>
+                <p class="text-sm text-murky-300 mb-4">Halaman ini khusus untuk Admin.</p>
+                <a href="/" class="inline-flex items-center justify-center rounded-md bg-primary-500 px-4 py-2 text-sm font-medium text-white">Kembali ke Beranda</a>
+            </div>
+            <div x-show="isAdmin" x-cloak class="container py-8">
+                <div class="grid grid-cols-1 md:grid-cols-5 gap-6">
+                    <div class="md:col-span-1">
+                        <div class="rounded-xl bg-murky-800 p-4">
+                            <div class="flex items-center gap-3 mb-4">
+                                <div class="h-12 w-12 rounded-full bg-primary-500 flex items-center justify-center text-lg font-bold" x-text="(user.username || 'A').charAt(0).toUpperCase()"></div>
+                                <div>
+                                    <div class="font-semibold" x-text="user.username || '-'"></div>
+                                    <div class="text-xs text-murky-300">Administrator</div>
+                                </div>
+                            </div>
+                            <nav class="admin-sidebar flex flex-col gap-1 text-sm pb-10">
+                                <a href="/" class="rounded-lg px-3 py-2 text-warning hover:bg-murky-700 text-yellow-400"><i class="bi bi-umbrella mr-2"></i>Beranda</a>
+                                
+                                <div x-data="{ openMenu: false }">
+                                    <button @click="openMenu = !openMenu" class="w-full flex items-center justify-between rounded-lg px-3 py-2 text-murky-200 hover:bg-murky-700" :class="{ 'active': ['dashboard', 'dashboard_devices', 'dashboard_revenue'].includes(tab) }">
+                                        <span><i class="bi bi-house mr-2"></i>Dashboard</span>
+                                        <i class="bi bi-chevron-down text-[10px] transition-transform duration-200" :class="openMenu ? 'rotate-180' : ''"></i>
+                                    </button>
+                                    <div x-show="openMenu" x-collapse>
+                                        <div class="flex flex-col gap-1 pl-8 pr-2 py-1">
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700" :class="{ 'text-primary-400': tab === 'dashboard_devices' }" @click.prevent="tab = 'dashboard_devices'">Devices</a>
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700" :class="{ 'text-primary-400': tab === 'dashboard' }" @click.prevent="tab = 'dashboard'; loadSummary()">Statistics</a>
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700" :class="{ 'text-primary-400': tab === 'dashboard_revenue' }" @click.prevent="tab = 'dashboard_revenue'">Revenue</a>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <hr class="border-murky-700 my-1">
+                                
+                                <div x-data="{ openMenu: false }">
+                                    <button @click="openMenu = !openMenu" class="w-full flex items-center justify-between rounded-lg px-3 py-2 text-murky-200 hover:bg-murky-700" :class="{ 'active': ['users_manage', 'users_locked', 'users_mutation', 'users_activity'].includes(tab) }">
+                                        <span><i class="bi bi-person mr-2"></i>Users</span>
+                                        <i class="bi bi-chevron-down text-[10px] transition-transform duration-200" :class="openMenu ? 'rotate-180' : ''"></i>
+                                    </button>
+                                    <div x-show="openMenu" x-collapse>
+                                        <div class="flex flex-col gap-1 pl-8 pr-2 py-1">
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700" :class="{ 'text-primary-400': tab === 'users_manage' }" @click.prevent="tab = 'users_manage'; loadUsers()">Manage</a>
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700" :class="{ 'text-primary-400': tab === 'users_locked' }" @click.prevent="tab = 'users_locked'">Locked</a>
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700" :class="{ 'text-primary-400': tab === 'users_mutation' }" @click.prevent="tab = 'users_mutation'">Mutation</a>
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700" :class="{ 'text-primary-400': tab === 'users_activity' }" @click.prevent="tab = 'users_activity'">Activity</a>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div x-data="{ openMenu: false }">
+                                    <button @click="openMenu = !openMenu" class="w-full flex items-center justify-between rounded-lg px-3 py-2 text-murky-200 hover:bg-murky-700">
+                                        <span><i class="bi bi-gear mr-2"></i>Configuration</span>
+                                        <i class="bi bi-chevron-down text-[10px] transition-transform duration-200" :class="openMenu ? 'rotate-180' : ''"></i>
+                                    </button>
+                                    <div x-show="openMenu" x-collapse>
+                                        <div class="flex flex-col gap-1 pl-8 pr-2 py-1">
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700">Website</a>
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700">Terms and Privacy</a>
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700">General Questions</a>
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700">Prefix ID</a>
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700">Others</a>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div x-data="{ openMenu: false }">
+                                    <button @click="openMenu = !openMenu" class="w-full flex items-center justify-between rounded-lg px-3 py-2 text-murky-200 hover:bg-murky-700">
+                                        <span><i class="bi bi-list mr-2"></i>Others</span>
+                                        <i class="bi bi-chevron-down text-[10px] transition-transform duration-200" :class="openMenu ? 'rotate-180' : ''"></i>
+                                    </button>
+                                    <div x-show="openMenu" x-collapse>
+                                        <div class="flex flex-col gap-1 pl-8 pr-2 py-1">
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700">Banner</a>
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700">Social</a>
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700">Color</a>
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700">Notification</a>
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700">Pop Up</a>
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700">Blog</a>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <hr class="border-murky-700 my-1">
+                                
+                                <a href="#" class="rounded-lg px-3 py-2 text-murky-200 hover:bg-murky-700"><i class="bi bi-cloud mr-2"></i>Tabs</a>
+                                <a href="#" class="rounded-lg px-3 py-2 text-murky-200 hover:bg-murky-700"><i class="bi bi-cloud mr-2"></i>Category</a>
+                                <a href="#" class="rounded-lg px-3 py-2 text-murky-200 hover:bg-murky-700" :class="{ 'active': tab === 'services' }" @click.prevent="tab = 'services'; loadServices()"><i class="bi bi-cloud mr-2"></i>Service</a>
+                                
+                                <hr class="border-murky-700 my-1">
+                                
+                                <a href="#" class="rounded-lg px-3 py-2 text-murky-200 hover:bg-murky-700"><i class="bi bi-cpu mr-2"></i>Provider</a>
+                                
+                                <div x-data="{ openMenu: false }">
+                                    <button @click="openMenu = !openMenu" class="w-full flex items-center justify-between rounded-lg px-3 py-2 text-murky-200 hover:bg-murky-700" :class="{ 'active': ['transactions_manage', 'transactions_report', 'transactions_voucher', 'transactions_flashsale'].includes(tab) }">
+                                        <span><i class="bi bi-bag mr-2"></i>Transaction</span>
+                                        <i class="bi bi-chevron-down text-[10px] transition-transform duration-200" :class="openMenu ? 'rotate-180' : ''"></i>
+                                    </button>
+                                    <div x-show="openMenu" x-collapse>
+                                        <div class="flex flex-col gap-1 pl-8 pr-2 py-1">
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700" :class="{ 'text-primary-400': tab === 'transactions_manage' }" @click.prevent="tab = 'transactions_manage'; loadTransactions()">Manage</a>
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700">Notifikasi Order Manual</a>
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700" :class="{ 'text-primary-400': tab === 'transactions_report' }" @click.prevent="tab = 'transactions_report'">Report</a>
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700" :class="{ 'text-primary-400': tab === 'transactions_voucher' }" @click.prevent="tab = 'transactions_voucher'">Voucher</a>
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700" :class="{ 'text-primary-400': tab === 'transactions_flashsale' }" @click.prevent="tab = 'transactions_flashsale'">Flashsale</a>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div x-data="{ openMenu: false }">
+                                    <button @click="openMenu = !openMenu" class="w-full flex items-center justify-between rounded-lg px-3 py-2 text-murky-200 hover:bg-murky-700" :class="{ 'active': ['financial_sales', 'financial_profit', 'financial_summary'].includes(tab) }">
+                                        <span><i class="bi bi-database mr-2"></i>Financial</span>
+                                        <i class="bi bi-chevron-down text-[10px] transition-transform duration-200" :class="openMenu ? 'rotate-180' : ''"></i>
+                                    </button>
+                                    <div x-show="openMenu" x-collapse>
+                                        <div class="flex flex-col gap-1 pl-8 pr-2 py-1">
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700" :class="{ 'text-primary-400': tab === 'financial_sales' }" @click.prevent="tab = 'financial_sales'">Sales</a>
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700" :class="{ 'text-primary-400': tab === 'financial_profit' }" @click.prevent="tab = 'financial_profit'">Profit</a>
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700" :class="{ 'text-primary-400': tab === 'financial_summary' }" @click.prevent="tab = 'financial_summary'">Summary</a>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <hr class="border-murky-700 my-1">
+                                
+                                <div x-data="{ openMenu: false }">
+                                    <button @click="openMenu = !openMenu" class="w-full flex items-center justify-between rounded-lg px-3 py-2 text-murky-200 hover:bg-murky-700">
+                                        <span><i class="bi bi-credit-card mr-2"></i>Deposit</span>
+                                        <i class="bi bi-chevron-down text-[10px] transition-transform duration-200" :class="openMenu ? 'rotate-180' : ''"></i>
+                                    </button>
+                                    <div x-show="openMenu" x-collapse>
+                                        <div class="flex flex-col gap-1 pl-8 pr-2 py-1">
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700">Manage</a>
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700">Report</a>
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700">Method</a>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div x-data="{ openMenu: false }">
+                                    <button @click="openMenu = !openMenu" class="w-full flex items-center justify-between rounded-lg px-3 py-2 text-murky-200 hover:bg-murky-700">
+                                        <span><i class="bi bi-box mr-2"></i>Server Act.</span>
+                                        <i class="bi bi-chevron-down text-[10px] transition-transform duration-200" :class="openMenu ? 'rotate-180' : ''"></i>
+                                    </button>
+                                    <div x-show="openMenu" x-collapse>
+                                        <div class="flex flex-col gap-1 pl-8 pr-2 py-1">
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700">Cronsjob</a>
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700">Error Log</a>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div x-data="{ openMenu: false }">
+                                    <button @click="openMenu = !openMenu" class="w-full flex items-center justify-between rounded-lg px-3 py-2 text-murky-200 hover:bg-murky-700">
+                                        <span><i class="bi bi-arrow-repeat mr-2"></i>Get Layanan</span>
+                                        <i class="bi bi-chevron-down text-[10px] transition-transform duration-200" :class="openMenu ? 'rotate-180' : ''"></i>
+                                    </button>
+                                    <div x-show="openMenu" x-collapse>
+                                        <div class="flex flex-col gap-1 pl-8 pr-2 py-1">
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700">DIGIFLAZZ</a>
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700">VIPAYMENT</a>
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700">KEYPEDIA</a>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <hr class="border-murky-700 my-1">
+                                <a href="#" class="rounded-lg px-3 py-2 text-red-400 hover:bg-murky-700 mt-2" @click.prevent="logout"><i class="bi bi-box-arrow-right mr-2"></i>Keluar</a>
+                            </nav>
+                        </div>
+                    </div>
+                    <div class="md:col-span-4 space-y-6">
+                        <!-- Dashboard -->
+                        <template x-if="tab === 'dashboard'">
+                            <div class="space-y-6">
+                                <div class="rounded-xl bg-murky-800 p-6">
+                                    <h2 class="text-xl font-bold mb-4">Ringkasan Keuangan</h2>
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                        <div class="rounded-lg bg-murky-700 p-4">
+                                            <div class="text-xs text-murky-300">Total Transaksi</div>
+                                            <div class="text-xl font-bold mt-1" x-text="summary.total_transactions || 0"></div>
+                                        </div>
+                                        <div class="rounded-lg bg-murky-700 p-4">
+                                            <div class="text-xs text-murky-300">Volume Penjualan</div>
+                                            <div class="text-xl font-bold text-green-400 mt-1">Rp <span x-text="fmt(summary.total_sales_volume)"></span></div>
+                                        </div>
+                                        <div class="rounded-lg bg-murky-700 p-4">
+                                            <div class="text-xs text-murky-300">Laba Kotor</div>
+                                            <div class="text-xl font-bold text-green-400 mt-1">Rp <span x-text="fmt(summary.total_gross_profit)"></span></div>
+                                        </div>
+                                        <div class="rounded-lg bg-murky-700 p-4">
+                                            <div class="text-xs text-murky-300">Pending / Sukses</div>
+                                            <div class="text-xl font-bold mt-1"><span class="text-yellow-400" x-text="summary.pending_orders_count || 0"></span> / <span class="text-green-400" x-text="summary.success_orders_count || 0"></span></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- Services -->
+                        <template x-if="tab === 'services'">
+                            <div class="rounded-xl bg-murky-800 overflow-hidden">
+                                <div class="p-5 border-b border-murky-700 flex justify-between items-center">
+                                    <span class="font-semibold">Daftar Layanan</span>
+                                    <a href="/" class="text-xs text-primary-400 hover:underline">+ Tambah via form admin (belum tersedia di CSR)</a>
+                                </div>
+                                <table class="w-full text-sm">
+                                    <thead class="bg-murky-700/50 text-xs text-murky-300">
+                                        <tr>
+                                            <th class="text-left px-5 py-3">Kode</th>
+                                            <th class="text-left px-5 py-3">Nama</th>
+                                            <th class="text-left px-5 py-3">Game</th>
+                                            <th class="text-right px-5 py-3">Harga</th>
+                                            <th class="text-right px-5 py-3">Tamu</th>
+                                            <th class="text-left px-5 py-3">Provider</th>
+                                            <th class="text-left px-5 py-3">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-murky-700">
+                                        <template x-for="s in services" :key="s.id">
+                                            <tr>
+                                                <td class="px-5 py-3 text-xs font-mono" x-text="s.code"></td>
+                                                <td class="px-5 py-3 text-xs" x-text="s.name"></td>
+                                                <td class="px-5 py-3 text-xs" x-text="s.game"></td>
+                                                <td class="px-5 py-3 text-right text-xs" x-text="'Rp ' + fmt(s.price)"></td>
+                                                <td class="px-5 py-3 text-right text-xs" x-text="'Rp ' + fmt(s.tamu)"></td>
+                                                <td class="px-5 py-3 text-xs" x-text="s.provider"></td>
+                                                <td class="px-5 py-3"><span class="px-2 py-0.5 rounded text-xs font-semibold" :class="s.status === 'available' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'" x-text="s.status"></span></td>
+                                            </tr>
+                                        </template>
+                                        <template x-if="services.length === 0"><tr><td colspan="7" class="px-5 py-8 text-center text-murky-400">Tidak ada layanan</td></tr></template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </template>
+
+                        <!-- Transactions -->
+                        <template x-if="tab === 'transactions_manage'">
+                            <div class="rounded-xl bg-murky-800 overflow-hidden">
+                                <div class="p-5 border-b border-murky-700 font-semibold">Daftar Transaksi</div>
+                                <table class="w-full text-sm">
+                                    <thead class="bg-murky-700/50 text-xs text-murky-300">
+                                        <tr>
+                                            <th class="text-left px-5 py-3">Invoice</th>
+                                            <th class="text-left px-5 py-3">User</th>
+                                            <th class="text-left px-5 py-3">Layanan</th>
+                                            <th class="text-right px-5 py-3">Harga</th>
+                                            <th class="text-left px-5 py-3">Status</th>
+                                            <th class="text-left px-5 py-3">Pembayaran</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-murky-700">
+                                        <template x-for="t in transactions" :key="t.order_id">
+                                            <tr>
+                                                <td class="px-5 py-3 text-xs font-mono text-orange-400" x-text="t.order_id"></td>
+                                                <td class="px-5 py-3 text-xs" x-text="t.user"></td>
+                                                <td class="px-5 py-3 text-xs" x-text="t.service_name"></td>
+                                                <td class="px-5 py-3 text-right text-xs font-semibold" x-text="'Rp ' + fmt(t.price)"></td>
+                                                <td class="px-5 py-3"><span class="px-2 py-0.5 rounded text-xs font-semibold" :class="statusClass(t.status)" x-text="t.status"></span></td>
+                                                <td class="px-5 py-3"><span class="px-2 py-0.5 rounded text-xs font-semibold" :class="t.status_payment === 'paid' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-yellow-500/20 text-yellow-300'" x-text="t.status_payment"></span></td>
+                                            </tr>
+                                        </template>
+                                        <template x-if="transactions.length === 0"><tr><td colspan="6" class="px-5 py-8 text-center text-murky-400">Tidak ada transaksi</td></tr></template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </template>
+
+                        <!-- Users -->
+                        <template x-if="tab === 'users_manage'">
+                            <div class="rounded-xl bg-murky-800 overflow-hidden">
+                                <div class="p-5 border-b border-murky-700 font-semibold">Daftar Pengguna</div>
+                                <table class="w-full text-sm">
+                                    <thead class="bg-murky-700/50 text-xs text-murky-300">
+                                        <tr>
+                                            <th class="text-left px-5 py-3">Username</th>
+                                            <th class="text-left px-5 py-3">Nama</th>
+                                            <th class="text-left px-5 py-3">Email</th>
+                                            <th class="text-right px-5 py-3">Saldo</th>
+                                            <th class="text-left px-5 py-3">Level</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-murky-700">
+                                        <template x-for="u in users" :key="u.id">
+                                            <tr>
+                                                <td class="px-5 py-3 text-xs font-semibold" x-text="u.username"></td>
+                                                <td class="px-5 py-3 text-xs" x-text="u.name || '-'"></td>
+                                                <td class="px-5 py-3 text-xs" x-text="u.email || '-'"></td>
+                                                <td class="px-5 py-3 text-right text-xs" x-text="'Rp ' + fmt(u.balance)"></td>
+                                                <td class="px-5 py-3"><span class="px-2 py-0.5 rounded text-xs font-semibold" :class="u.level === 'Admin' ? 'bg-purple-500/20 text-purple-300' : u.level === 'Reseller' ? 'bg-blue-500/20 text-blue-300' : 'bg-gray-500/20 text-gray-300'" x-text="u.level"></span></td>
+                                            </tr>
+                                        </template>
+                                        <template x-if="users.length === 0"><tr><td colspan="5" class="px-5 py-8 text-center text-murky-400">Tidak ada pengguna</td></tr></template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    <div id="site-footer"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
+    <script src="/assets/js/layout.js"></script>
+    <script src="/assets/js/app-data.js"></script>
+    <script>
+        function adminData() {
+            return Object.assign(layoutData(), {
+                isAdmin: false,
+                user: {},
+                tab: 'dashboard',
+                summary: {},
+                services: [],
+                transactions: [],
+                users: [],
+                initAdmin() {
+                    this.loadConfig();
+                    const token = localStorage.getItem('auth_token');
+                    const u = localStorage.getItem('auth_user');
+                    if (!token || !u) { this.isAdmin = false; return; }
+                    try { this.user = JSON.parse(u); } catch (e) { this.user = {}; }
+                    this.isAdmin = this.user.level === 'Admin';
+                    if (this.isAdmin) this.loadSummary();
+                },
+                loadSummary() {
+                    fetchJSON('/api/admin/financial-summary')
+                        .then(res => { this.summary = res.data || {}; })
+                        .catch(err => console.error(err));
+                },
+                loadServices() {
+                    fetchJSON('/api/admin/services')
+                        .then(res => { this.services = res.data || []; })
+                        .catch(err => console.error(err));
+                },
+                loadTransactions() {
+                    fetchJSON('/api/admin/transactions')
+                        .then(res => { this.transactions = res.data || []; })
+                        .catch(err => console.error(err));
+                },
+                loadUsers() {
+                    fetchJSON('/api/admin/users')
+                        .then(res => { this.users = res.data || []; })
+                        .catch(err => console.error(err));
+                },
+                statusClass(s) {
+                    const map = { success: 'bg-emerald-500/20 text-emerald-300', pending: 'bg-yellow-500/20 text-yellow-300', process: 'bg-blue-500/20 text-blue-300', system: 'bg-blue-500/20 text-blue-300', error: 'bg-red-500/20 text-red-300' };
+                    return map[s] || 'bg-gray-500/20 text-gray-300';
+                },
+                logout() {
+                    localStorage.removeItem('auth_token');
+                    localStorage.removeItem('auth_user');
+                    window.location.href = '/';
+                }
+            });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="dark">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0, minimal-ui">
+    <meta content="Aruteru Shoppu Top Up Game" name="description">
+    <meta content="Top up game murah" name="keyword">
+    <meta name="author" content="Sahabat Store x DhaMus">
+    <title>Cek Region — Aruteru Shoppu</title>
+    <link rel="shortcut icon" href="/imagehome/Footeraru.png">
+    <link rel="stylesheet" href="https://unpkg.com/boxicons@latest/css/boxicons.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="/library/assets/guest/css/e00de8768e0e97d0dsddd0b0.css">
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/placeholder-loading/dist/css/placeholder-loading.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="/library/assets/guest/css/header.css">
+    <link rel="stylesheet" href="/library/assets/guest/css/mobile-menu.css">
+    <link rel="stylesheet" href="/library/assets/guest/css/e00de8768e0e97d0dsddd0bb.css">
+    <link rel="stylesheet" href="/library/assets/guest/css/app.css">
+    <link rel="stylesheet" href="/library/assets/guest/css/home.css">
+    <link rel="stylesheet" href="/library/assets/guest/css/region.css">
+    <link rel="stylesheet" href="/library/assets/guest/css/footer.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        murky: {
+                            200: '#e2e8f0',
+                            300: '#cbd5e1',
+                            400: '#94a3b8',
+                            500: '#64748b',
+                            600: '#475569',
+                            700: '#334155',
+                            800: '#1e293b',
+                            900: '#0f172a',
+                        },
+                        'dark-new3': '#182232',
+                        melpa: {
+                            100: '#1e293b',
+                        },
+                        primary: {
+                            400: '#818cf8',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        :root {
+            --warna_1: #1e293b;
+            --warna_2: #0f172a;
+            --warna_3: #6366f1;
+            --warna_4: #334155;
+            --primary-500: #6366f1;
+            --murky-700-hover: #334155;
+        }
+        :root[data-theme="light"] {
+            --warna_1: #ffffff;
+            --warna_2: #f8f9fa;
+            --warna_3: #007bff;
+            --warna_4: #e9ecef;
+            --primary-500: #007bff;
+            --murky-700-hover: #dee2e6;
+            --text-color: #343a40;
+            --bg-color: #ffffff;
+        }
+        :root[data-theme="dark"] {
+            --warna_1: #1e293b;
+            --warna_2: #0f172a;
+            --warna_3: #6366f1;
+            --warna_4: #334155;
+            --primary-500: #007bff;
+            --murky-700-hover: #334155;
+            --text-color: #ffffff;
+            --menu-text: #ffffff;
+            --bg-color: #0f172a;
+        }
+        [x-cloak] { display: none !important; }
+        .desktop-nav-link, .mobile-nav-link { font-size: 12px; padding: 0.3rem 0.4rem; display: inline-flex; align-items: center; gap: 0.25rem; color: white; font-weight: 500; }
+        [data-theme="dark"] .desktop-nav-link { color: white; font-weight: 500; }
+        [data-theme="light"] .desktop-nav-link { color: #000000; font-weight: 600; }
+    </style>
+    <script defer src="//cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body class="text-white antialiased bg-[#0f172a]" data-aruteru-layout>
+    <div id="site-header"></div>
+    <main class="relative">
+        <div id="app" x-data="regionData()" x-init="loadConfig()">
+            <section id="history">
+                <div class="container mx-auto px-4">
+                    <div class="text-center mb-8 mt-16">
+                        <h1 class="text-4xl md:text-5xl font-bold mb-6">Cek Region MLBB</h1>
+                        <p class="text-lg">Temukan informasi region dan username akun Mobile Legends Anda dengan mudah</p>
+                    </div>
+                    <div class="form-container max-w-2xl mx-auto">
+                        <form @submit.prevent="check" class="space-y-6">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label for="userid" class="block text-sm font-medium text-white mb-2"><i class='bx bx-user-circle mr-2'></i> User ID</label>
+                                    <input class="input-field w-full px-4 py-3 rounded-lg bg-murky-700 text-white placeholder-murky-400 focus:outline-none focus:ring-2 focus:ring-primary-500" type="number" id="userid" x-model.number="userId" placeholder="Masukkan User ID" required>
+                                </div>
+                                <div>
+                                    <label for="server" class="block text-sm font-medium text-white mb-2"><i class='bx bx-server mr-2'></i> Server</label>
+                                    <input class="input-field w-full px-4 py-3 rounded-lg bg-murky-700 text-white placeholder-murky-400 focus:outline-none focus:ring-2 focus:ring-primary-500" type="number" id="server" x-model.number="server" placeholder="Masukkan Server" required>
+                                </div>
+                            </div>
+                            <button type="submit" class="w-full px-4 py-3 rounded-lg bg-primary-500 text-white font-medium hover:bg-primary-600 transition-colors flex items-center justify-center gap-2" :disabled="loading">
+                                <img x-show="loading" x-cloak src="https://media1.giphy.com/media/3oEjI6SIEBu5Vj2G3y/200w.gif" alt="Loading" class="h-5 w-5 inline-block">
+                                <span x-text="loading ? 'Loading...' : 'Cari Akun'"></span>
+                            </button>
+                        </form>
+                        <div x-show="result" x-cloak id="result-container" class="hidden mt-6">
+                            <div class="bg-murky-800 rounded-lg p-6 shadow-lg">
+                                <div class="mb-4">
+                                    <h3 class="text-white text-lg font-medium"><i class="bx bx-check-circle mr-2"></i> Informasi Akun Ditemukan</h3>
+                                    <p class="text-gray-400 text-sm">Detail informasi akun Mobile Legends Anda</p>
+                                </div>
+                                <div class="bg-murky-700 rounded-lg overflow-hidden">
+                                    <table class="w-full">
+                                        <tbody>
+                                            <tr class="border-b border-murky-600"><td class="py-3 px-4 text-gray-300"><i class="bx bx-user-circle mr-2"></i> User ID</td><td class="py-3 px-4 text-white" x-text="userId"></td></tr>
+                                            <tr class="border-b border-murky-600"><td class="py-3 px-4 text-gray-300"><i class="bx bx-user mr-2"></i> Username</td><td class="py-3 px-4 text-white" x-text="result.username || '-'"></td></tr>
+                                            <tr class="border-b border-murky-600"><td class="py-3 px-4 text-gray-300"><i class="bx bx-map mr-2"></i> Region</td><td class="py-3 px-4 text-white" x-text="result.region || '-'"></td></tr>
+                                            <tr><td class="py-3 px-4 text-gray-300"><i class="bx bx-server mr-2"></i> Server</td><td class="py-3 px-4 text-white" x-text="server"></td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        <div x-show="error" x-cloak class="mt-6 bg-red-500/10 border border-red-500/30 rounded-lg p-4 text-red-300 text-sm" x-text="error"></div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+    <div id="site-footer"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
+    <script src="/assets/js/layout.js"></script>
+    <script src="/assets/js/app-data.js"></script>
+    <script>
+        function regionData() {
+            return Object.assign(layoutData(), {
+                userId: '',
+                server: '',
+                result: null,
+                error: '',
+                loading: false,
+                check() {
+                    if (!this.userId || !this.server) { this.error = 'User ID dan Server wajib diisi'; return; }
+                    this.loading = true;
+                    this.error = '';
+                    this.result = null;
+                    fetchJSON(`/api/check-ml?user_id=${encodeURIComponent(this.userId)}&zone_id=${encodeURIComponent(this.server)}`)
+                        .then(res => {
+                            this.loading = false;
+                            this.result = res || {};
+                            if (this.result && (this.result.username || this.result.region)) {
+                                showToast('Akun berhasil ditemukan', 'success');
+                            }
+                        })
+                        .catch(err => {
+                            this.loading = false;
+                            this.error = 'Akun tidak ditemukan atau terjadi kesalahan.';
+                            console.error(err);
+                        });
+                }
+            });
+        }
+    </script>
+</body>
+</html>

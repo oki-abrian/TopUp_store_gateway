@@ -1,0 +1,175 @@
+/* Enhanced Popular Product Animations - Mobile & Desktop Optimized */
+.kntl {
+    display: block;
+    transform: translateY(0);
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    will-change: transform;
+    position: relative;
+}
+
+/* Card hover effect */
+.kntl:hover {
+    transform: translateY(-8px) scale(1.02);
+}
+
+/* Glow effect on hover */
+.kntl::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(45deg, #ff6b6b, #feca57, #ff9ff3);
+    z-index: -1;
+    border-radius: 15px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    filter: blur(8px);
+}
+
+.kntl:hover::after {
+    opacity: 0.5;
+}
+
+.bg-title-product {
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+}
+
+/* Shine effect animation */
+.bg-title-product::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(
+        circle,
+        rgba(255, 255, 255, 0.1) 0%,
+        rgba(255, 255, 255, 0.15) 50%,
+        transparent 100%
+    );
+    transform: scale(0);
+    transition: transform 0.6s ease-out;
+    pointer-events: none;
+}
+
+.bg-title-product:hover::before {
+    transform: scale(1);
+}
+
+/* Enhanced hover effects */
+.bg-title-product:hover {
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    border-color: rgba(255, 255, 255, 0.3);
+    transform: translateZ(10px);
+}
+
+/* Dynamic fire emoji animation */
+@keyframes fireFloat {
+    0%, 100% {
+        transform: translateY(0) rotate(0deg) scale(1);
+        filter: drop-shadow(0 0 2px rgba(255, 156, 0, 0.5));
+    }
+    25% {
+        transform: translateY(-4px) rotate(-5deg) scale(1.2);
+        filter: drop-shadow(0 0 4px rgba(255, 156, 0, 0.7));
+    }
+    75% {
+        transform: translateY(-4px) rotate(5deg) scale(1.2);
+        filter: drop-shadow(0 0 4px rgba(255, 156, 0, 0.7));
+    }
+}
+
+/* Enhanced fire emoji styling */
+.text-lg.font-semibold.leading-relaxed.tracking-wider {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.text-lg.font-semibold.leading-relaxed.tracking-wider span {
+    display: inline-block;
+    animation: fireFloat 2s ease-in-out infinite;
+    transform-origin: center;
+}
+
+/* Image animation */
+.bg-title-product img {
+    transition: all 0.4s ease;
+    transform-origin: center;
+}
+
+.bg-title-product:hover img {
+    transform: scale(1.08) rotate(2deg);
+}
+
+/* Mobile-specific enhancements */
+@media (max-width: 768px) {
+    .kntl {
+        transform: scale(0.98);
+        transition: transform 0.3s ease;
+    }
+    
+    .kntl:active {
+        transform: scale(0.95);
+    }
+    
+    .bg-title-product:active {
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    }
+    
+    /* Optimized animations for mobile */
+    .bg-title-product::before {
+        display: none;
+    }
+    
+    .kntl::after {
+        filter: blur(5px);
+    }
+}
+
+/* Desktop enhancements */
+@media (min-width: 769px) {
+    .bg-title-product {
+        transition: transform 0.4s ease, box-shadow 0.4s ease;
+    }
+    
+    .bg-title-product:hover {
+        transform: translateZ(20px) scale(1.02);
+    }
+}
+
+/* Touch device support */
+@media (hover: none) {
+    .kntl:active {
+        transform: scale(0.98);
+    }
+    
+    .bg-title-product:active::before {
+        opacity: 1;
+    }
+}
+
+/* Reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+    .kntl,
+    .bg-title-product,
+    .bg-title-product::before,
+    .text-lg.font-semibold.leading-relaxed.tracking-wider span {
+        transition: none !important;
+        animation: none !important;
+        transform: none !important;
+        filter: none !important;
+    }
+    
+    .kntl::after {
+        display: none;
+    }
+}
