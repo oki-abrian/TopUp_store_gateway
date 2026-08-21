@@ -3,6 +3,7 @@ use rust_backend::{
     domain::cron::{auto_refund::start_expired_cleaner_task, status_poller::start_status_poller_task, tokopay_worker::start_tokopay_worker},
     domain::telegram::gopay_bot::start_gopay_bot,
     domain::telegram::report_bot::start_report_bot,
+    domain::telegram::sync_bot::start_price_sync_worker,
 };
 use sqlx::mysql::MySqlPoolOptions;
 use std::env;
@@ -32,6 +33,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     start_expired_cleaner_task(db_pool.clone()).await;
     
     start_tokopay_worker(db_pool.clone()).await;
+
+    // BOT 3: Price/Promo Sync Worker (Fulfillment -> Web, sumber kebenaran = DB Topup)
+    let sync_pool = db_pool.clone();
+    tokio::spawn(async move {
+        start_price_sync_worker(sync_pool).await;
+    });
     
     tracing::info!("[SERVICE 2] Tokio Background Cron Workers started.");
 
@@ -51,6 +58,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     if !bot_2_token.is_empty() && !group_2_id.is_empty() {
+        // ANTI 409: token listener fulfillment TIDAK BOLEH sama dengan token
+        // listener web (dua getUpdates dengan token sama saling merebut update).
+        for key in ["TELEGRAM_CALLBACK_BOT_TOKEN", "TELEGRAM_BOT_TOKEN", "TELEGRAM_BOT_SENDER_TOKEN"] {
+            if let Ok(t) = env::var(key) {
+                if t == bot_2_token && !t.is_empty() {
+                    tracing::error!(
+                        "[CONFIG FATAL] TELEGRAM_BOT_2_TOKEN (listener fulfillment) SAMA dengan {}. \
+                         Dua listener getUpdates dengan token yang sama akan saling bertabrakan (HTTP 409) \
+                         dan pesan bisa hilang. WAJIB beda bot!",
+                        key
+                    );
+                }
+            }
+        }
         let db_pool_clone = db_pool.clone();
         tokio::spawn(async move {
             start_report_bot(db_pool_clone, bot_2_token, group_2_id).await;

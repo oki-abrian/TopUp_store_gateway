@@ -19,7 +19,7 @@ async fn handle_gopay_message(
     // Reject non-text messages
     if msg.text().is_none() {
         tracing::info!("[GOPAY BOT] Rejected non-text message.");
-        let _ = bot.delete_message(msg.chat.id, msg.id).await;
+        crate::domain::telegram::report_bot::delayed_delete(&bot, msg.chat.id, msg.id);
         return Ok(());
     }
 
@@ -76,7 +76,7 @@ async fn handle_gopay_message(
         }
         
         // Auto-delete the original notification to keep group clean
-        let _ = bot.delete_message(msg.chat.id, msg.id).await;
+        crate::domain::telegram::report_bot::delayed_delete(&bot, msg.chat.id, msg.id);
     }
 
     Ok(())

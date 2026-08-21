@@ -218,7 +218,7 @@ pub async fn create_deposit(
             
             let client = reqwest::Client::new();
             let total_amount = req.amount + uniq;
-            let return_url = format!("https://yoursite.com/deposit/invoices/{}", post_rid);
+            let return_url = format!("/deposit/invoices/{}", post_rid);
 
             if method_provider == "PAYDISINI" {
                 let gateway = crate::payments::paydisini::PaydisiniGateway::new(p_apikey, p_userid);

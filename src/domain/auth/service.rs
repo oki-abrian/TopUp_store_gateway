@@ -110,6 +110,24 @@ pub async fn login_user(
 
     let user = user_opt.ok_or(AppError::UserNotFound)?;
 
+    // Parity with PHP check_lock(): reject suspended/locked accounts before password verify
+    let status: String = sqlx::query_scalar("SELECT COALESCE(status, 'active') FROM users WHERE username = ?")
+        .bind(username)
+        .fetch_one(db)
+        .await
+        .unwrap_or_else(|_| "active".to_string());
+    if status != "active" {
+        return Err(AppError::AccountLocked("Akun Anda sedang ditangguhkan. Hubungi admin.".to_string()));
+    }
+    let lock_reason: Option<String> = sqlx::query_scalar("SELECT reason FROM users_lock WHERE user = ? LIMIT 1")
+        .bind(username)
+        .fetch_optional(db)
+        .await
+        .unwrap_or(None);
+    if let Some(reason) = lock_reason {
+        return Err(AppError::AccountLocked(format!("Akun Anda dikunci: {}", reason)));
+    }
+
     let hashed_pw = user.password.as_deref().unwrap_or("");
     let is_valid = verify(password, hashed_pw).unwrap_or(false);
     if !is_valid {

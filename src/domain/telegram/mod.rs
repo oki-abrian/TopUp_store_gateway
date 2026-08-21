@@ -1,5 +1,6 @@
 pub mod gopay_bot;
 pub mod report_bot;
+pub mod sync_bot;
 
 use crate::models::Transaction;
 use crate::providers::digiflazz::DigiFlazzClient;
@@ -39,6 +40,9 @@ pub async fn process_paid_transaction(
         tracing::warn!("Order {} already claimed or marked paid. Skipping duplicate topup dispatch.", order_id);
         return Ok(());
     }
+
+    // CATATAN: stok voucher sudah dikonsumsi ATOMIK saat order dibuat di report_bot,
+    // bukan di sini (mencegah double-decrement). Restock hanya saat topup GAGAL (di bawah).
 
     // D. Dispatch Topup Request to External Supplier API
     if order.provider == "DIGI" {
@@ -85,7 +89,16 @@ pub async fn process_paid_transaction(
             }
             Ok(res) => {
                 tracing::warn!("DigiFlazz topup failed for Order {}: {}", order.order_id, res.message);
-                
+
+                // Restock voucher — pembeli tidak jadi mendapatkan produk
+                if let Ok(Some(v)) = sqlx::query_scalar::<MySql, String>("SELECT COALESCE(voucher, '') FROM transaction WHERE order_id = ?")
+                    .bind(&order.order_id)
+                    .fetch_optional(db)
+                    .await
+                {
+                    crate::domain::orders::pricing::restock_voucher(db, &v).await;
+                }
+
                 // Ambil note terbaru dari database
                 let current_note: Option<(Option<String>,)> = sqlx::query_as("SELECT note FROM transaction WHERE order_id = ?")
                     .bind(&order.order_id)

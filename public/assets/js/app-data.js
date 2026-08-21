@@ -17,6 +17,17 @@ function slugify(s) {
 }
 
 async function fetchJSON(url, options) {
+    options = options || {};
+    options.headers = Object.assign({}, options.headers);
+    // Attach session token (parity with PHP cookie session) for account/admin APIs
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+        options.headers['Authorization'] = 'Bearer ' + token;
+    }
+    // axum Json extractor menuntut header Content-Type yang benar
+    if (options.body && !options.headers['Content-Type']) {
+        options.headers['Content-Type'] = 'application/json';
+    }
     const res = await fetch(url, options);
     if (!res.ok) throw new Error('HTTP ' + res.status);
     return res.json();

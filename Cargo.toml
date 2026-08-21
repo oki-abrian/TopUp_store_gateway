@@ -45,5 +45,9 @@ path = "src/bin/store_gateway.rs"
 name = "fulfillment_service"
 path = "src/bin/fulfillment_service.rs"
 
+[[bin]]
+name = "fulfillment_cli"
+path = "src/bin/fulfillment_cli.rs"
+
 
 

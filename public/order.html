@@ -547,15 +547,21 @@
                     fetchJSON('/api/v1/voucher/check', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ code: this.voucher, price: this.selectedProduct ? this.selectedProduct.show_price : 0 })
+                        body: JSON.stringify({
+                            code: this.voucher,
+                            price: this.selectedProduct ? this.selectedProduct.show_price : 0,
+                            service_code: this.selectedProduct ? this.selectedProduct.code : '',
+                            category: this.product ? this.product.name : ''
+                        })
                     })
                         .then(res => {
                             this.voucherChecking = false;
                             if (res.result) {
                                 this.voucherApplied = true;
-                                this.voucherDiscount = res.discount || 0;
+                                this.voucherDiscount = (res.data && res.data.discount) || 0;
                             } else {
                                 this.voucherApplied = false;
+                                this.voucherDiscount = 0;
                                 this.voucherError = res.message || 'Kode voucher tidak valid';
                             }
                         })
@@ -621,6 +627,9 @@
                 orderProcess() {
                     if (this.submitting) return;
                     this.submitting = true;
+                    const authUser = (function () {
+                        try { return JSON.parse(localStorage.getItem('auth_user') || 'null'); } catch (e) { return null; }
+                    })();
                     fetchJSON('/api/v1/order/submit', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -630,13 +639,16 @@
                             target: this.targetText,
                             nickname: this.nickname,
                             whaphone: this.phone,
-                            voucher: this.voucher || ''
+                            voucher: this.voucher || '',
+                            username: authUser ? authUser.username : ''
                         })
                     })
                         .then(res => {
                             this.submitting = false;
                             this.confirmOpen = false;
                             if (res.result) {
+                                // Invoice gateway BARU dibuat setelah Server Topup meng-ACC
+                                // harga otoritatif (lihat faktur — otomatis saat ACCEPTED).
                                 window.location.href = '/invoices/' + res.order_id;
                             } else {
                                 alert(res.message || 'Terjadi kesalahan');

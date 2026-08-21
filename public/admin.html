@@ -32,15 +32,8 @@
                             900: '#0f172a',
                         },
                         'dark-new3': '#182232',
-                        melpa: {
-                            100: '#1e293b',
-                        },
-                        primary: {
-                            400: '#818cf8',
-                            500: '#6366f1',
-                            600: '#4f46e5',
-                            700: '#4338ca',
-                        }
+                        melpa: { 100: '#1e293b' },
+                        primary: { 400: '#818cf8', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca' }
                     }
                 }
             }
@@ -48,39 +41,25 @@
     </script>
     <style>
         :root {
-            --warna_1: #1e293b;
-            --warna_2: #0f172a;
-            --warna_3: #6366f1;
-            --warna_4: #334155;
-            --primary-500: #6366f1;
-            --murky-700-hover: #334155;
+            --warna_1: #1e293b; --warna_2: #0f172a; --warna_3: #6366f1; --warna_4: #334155;
+            --primary-500: #6366f1; --murky-700-hover: #334155;
         }
         :root[data-theme="light"] {
-            --warna_1: #ffffff;
-            --warna_2: #f8f9fa;
-            --warna_3: #007bff;
-            --warna_4: #e9ecef;
-            --primary-500: #007bff;
-            --murky-700-hover: #dee2e6;
-            --text-color: #343a40;
-            --bg-color: #ffffff;
+            --warna_1: #ffffff; --warna_2: #f8f9fa; --warna_3: #007bff; --warna_4: #e9ecef;
+            --primary-500: #007bff; --murky-700-hover: #dee2e6; --text-color: #343a40; --bg-color: #ffffff;
         }
         :root[data-theme="dark"] {
-            --warna_1: #1e293b;
-            --warna_2: #0f172a;
-            --warna_3: #6366f1;
-            --warna_4: #334155;
-            --primary-500: #007bff;
-            --murky-700-hover: #334155;
-            --text-color: #ffffff;
-            --menu-text: #ffffff;
-            --bg-color: #0f172a;
+            --warna_1: #1e293b; --warna_2: #0f172a; --warna_3: #6366f1; --warna_4: #334155;
+            --primary-500: #007bff; --murky-700-hover: #334155; --text-color: #ffffff; --menu-text: #ffffff; --bg-color: #0f172a;
         }
         [x-cloak] { display: none !important; }
-        .desktop-nav-link, .mobile-nav-link { font-size: 12px; padding: 0.3rem 0.4rem; display: inline-flex; align-items: center; gap: 0.25rem; color: white; font-weight: 500; }
-        [data-theme="dark"] .desktop-nav-link { color: white; font-weight: 500; }
-        [data-theme="light"] .desktop-nav-link { color: #000000; font-weight: 600; }
         .admin-sidebar a.active { background: rgba(99, 102, 241, 0.2); color: #fff; border-left: 3px solid #6366f1; }
+        .bar-chart { display: flex; align-items: flex-end; gap: 3px; height: 90px; }
+        .bar-chart > div { flex: 1; background: rgba(99,102,241,0.65); border-radius: 3px 3px 0 0; min-height: 4px; transition: height .3s; }
+        .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 60; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+        .form-input { width: 100%; border-radius: .5rem; background: #0f172a; border: 1px solid #334155; padding: .5rem .75rem; font-size: .8rem; color: #fff; }
+        .form-input:focus { outline: none; border-color: #6366f1; }
+        .form-label { display: block; font-size: .75rem; font-weight: 500; color: #cbd5e1; margin-bottom: .25rem; }
     </style>
     <script defer src="//cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
@@ -96,6 +75,7 @@
             </div>
             <div x-show="isAdmin" x-cloak class="container py-8">
                 <div class="grid grid-cols-1 md:grid-cols-5 gap-6">
+                    <!-- ============ SIDEBAR ============ -->
                     <div class="md:col-span-1">
                         <div class="rounded-xl bg-murky-800 p-4">
                             <div class="flex items-center gap-3 mb-4">
@@ -106,261 +86,247 @@
                                 </div>
                             </div>
                             <nav class="admin-sidebar flex flex-col gap-1 text-sm pb-10">
-                                <a href="/" class="rounded-lg px-3 py-2 text-warning hover:bg-murky-700 text-yellow-400"><i class="bi bi-umbrella mr-2"></i>Beranda</a>
-                                
-                                <div x-data="{ openMenu: false }">
+                                <a href="/" class="rounded-lg px-3 py-2 hover:bg-murky-700 text-yellow-400"><i class="bi bi-umbrella mr-2"></i>Beranda</a>
+
+                                <div x-data="{ openMenu: true }">
                                     <button @click="openMenu = !openMenu" class="w-full flex items-center justify-between rounded-lg px-3 py-2 text-murky-200 hover:bg-murky-700" :class="{ 'active': ['dashboard', 'dashboard_devices', 'dashboard_revenue'].includes(tab) }">
                                         <span><i class="bi bi-house mr-2"></i>Dashboard</span>
                                         <i class="bi bi-chevron-down text-[10px] transition-transform duration-200" :class="openMenu ? 'rotate-180' : ''"></i>
                                     </button>
                                     <div x-show="openMenu" x-collapse>
                                         <div class="flex flex-col gap-1 pl-8 pr-2 py-1">
-                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700" :class="{ 'text-primary-400': tab === 'dashboard_devices' }" @click.prevent="tab = 'dashboard_devices'">Devices</a>
-                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700" :class="{ 'text-primary-400': tab === 'dashboard' }" @click.prevent="tab = 'dashboard'; loadSummary()">Statistics</a>
-                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700" :class="{ 'text-primary-400': tab === 'dashboard_revenue' }" @click.prevent="tab = 'dashboard_revenue'">Revenue</a>
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700" :class="{ 'text-primary-400': tab === 'dashboard_devices' }" @click.prevent="go('dashboard_devices')">Devices</a>
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700" :class="{ 'text-primary-400': tab === 'dashboard' }" @click.prevent="go('dashboard')">Statistics</a>
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700" :class="{ 'text-primary-400': tab === 'dashboard_revenue' }" @click.prevent="go('dashboard_revenue')">Revenue</a>
                                         </div>
                                     </div>
                                 </div>
-                                
+
                                 <hr class="border-murky-700 my-1">
-                                
+
                                 <div x-data="{ openMenu: false }">
-                                    <button @click="openMenu = !openMenu" class="w-full flex items-center justify-between rounded-lg px-3 py-2 text-murky-200 hover:bg-murky-700" :class="{ 'active': ['users_manage', 'users_locked', 'users_mutation', 'users_activity'].includes(tab) }">
+                                    <button @click="openMenu = !openMenu" class="w-full flex items-center justify-between rounded-lg px-3 py-2 text-murky-200 hover:bg-murky-700" :class="{ 'active': ['users_manage','users_locked','users_mutation','users_activity'].includes(tab) }">
                                         <span><i class="bi bi-person mr-2"></i>Users</span>
                                         <i class="bi bi-chevron-down text-[10px] transition-transform duration-200" :class="openMenu ? 'rotate-180' : ''"></i>
                                     </button>
                                     <div x-show="openMenu" x-collapse>
                                         <div class="flex flex-col gap-1 pl-8 pr-2 py-1">
-                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700" :class="{ 'text-primary-400': tab === 'users_manage' }" @click.prevent="tab = 'users_manage'; loadUsers()">Manage</a>
-                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700" :class="{ 'text-primary-400': tab === 'users_locked' }" @click.prevent="tab = 'users_locked'">Locked</a>
-                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700" :class="{ 'text-primary-400': tab === 'users_mutation' }" @click.prevent="tab = 'users_mutation'">Mutation</a>
-                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700" :class="{ 'text-primary-400': tab === 'users_activity' }" @click.prevent="tab = 'users_activity'">Activity</a>
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700" :class="{ 'text-primary-400': tab === 'users_manage' }" @click.prevent="go('users_manage')">Manage</a>
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700" :class="{ 'text-primary-400': tab === 'users_locked' }" @click.prevent="go('users_locked')">Locked</a>
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700" :class="{ 'text-primary-400': tab === 'users_mutation' }" @click.prevent="go('users_mutation')">Mutation</a>
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700" :class="{ 'text-primary-400': tab === 'users_activity' }" @click.prevent="go('users_activity')">Activity</a>
                                         </div>
                                     </div>
                                 </div>
-                                
+
                                 <div x-data="{ openMenu: false }">
-                                    <button @click="openMenu = !openMenu" class="w-full flex items-center justify-between rounded-lg px-3 py-2 text-murky-200 hover:bg-murky-700">
+                                    <button @click="openMenu = !openMenu" class="w-full flex items-center justify-between rounded-lg px-3 py-2 text-murky-200 hover:bg-murky-700" :class="{ 'active': ['config_website','config_pages','config_faq','config_prefix','config_others'].includes(tab) }">
                                         <span><i class="bi bi-gear mr-2"></i>Configuration</span>
                                         <i class="bi bi-chevron-down text-[10px] transition-transform duration-200" :class="openMenu ? 'rotate-180' : ''"></i>
                                     </button>
                                     <div x-show="openMenu" x-collapse>
                                         <div class="flex flex-col gap-1 pl-8 pr-2 py-1">
-                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700">Website</a>
-                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700">Terms and Privacy</a>
-                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700">General Questions</a>
-                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700">Prefix ID</a>
-                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700">Others</a>
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700" :class="{ 'text-primary-400': tab === 'config_website' }" @click.prevent="go('config_website')">Website</a>
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700" :class="{ 'text-primary-400': tab === 'config_pages' }" @click.prevent="go('config_pages')">Terms and Privacy</a>
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700" :class="{ 'text-primary-400': tab === 'config_faq' }" @click.prevent="go('config_faq')">General Questions</a>
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700" :class="{ 'text-primary-400': tab === 'config_prefix' }" @click.prevent="go('config_prefix')">Prefix ID</a>
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700" :class="{ 'text-primary-400': tab === 'config_others' }" @click.prevent="go('config_others')">Others</a>
                                         </div>
                                     </div>
                                 </div>
-                                
+
                                 <div x-data="{ openMenu: false }">
-                                    <button @click="openMenu = !openMenu" class="w-full flex items-center justify-between rounded-lg px-3 py-2 text-murky-200 hover:bg-murky-700">
+                                    <button @click="openMenu = !openMenu" class="w-full flex items-center justify-between rounded-lg px-3 py-2 text-murky-200 hover:bg-murky-700" :class="{ 'active': ['others_banner','others_social','others_color','others_notification','others_popup','others_blog'].includes(tab) }">
                                         <span><i class="bi bi-list mr-2"></i>Others</span>
                                         <i class="bi bi-chevron-down text-[10px] transition-transform duration-200" :class="openMenu ? 'rotate-180' : ''"></i>
                                     </button>
                                     <div x-show="openMenu" x-collapse>
                                         <div class="flex flex-col gap-1 pl-8 pr-2 py-1">
-                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700">Banner</a>
-                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700">Social</a>
-                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700">Color</a>
-                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700">Notification</a>
-                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700">Pop Up</a>
-                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700">Blog</a>
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700" :class="{ 'text-primary-400': tab === 'others_banner' }" @click.prevent="go('others_banner')">Banner</a>
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700" :class="{ 'text-primary-400': tab === 'others_social' }" @click.prevent="go('others_social')">Social</a>
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700" :class="{ 'text-primary-400': tab === 'others_color' }" @click.prevent="go('others_color')">Color</a>
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700" :class="{ 'text-primary-400': tab === 'others_notification' }" @click.prevent="go('others_notification')">Notification</a>
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700" :class="{ 'text-primary-400': tab === 'others_popup' }" @click.prevent="go('others_popup')">Pop Up</a>
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700" :class="{ 'text-primary-400': tab === 'others_blog' }" @click.prevent="go('others_blog')">Blog</a>
                                         </div>
                                     </div>
                                 </div>
-                                
+
                                 <hr class="border-murky-700 my-1">
-                                
-                                <a href="#" class="rounded-lg px-3 py-2 text-murky-200 hover:bg-murky-700"><i class="bi bi-cloud mr-2"></i>Tabs</a>
-                                <a href="#" class="rounded-lg px-3 py-2 text-murky-200 hover:bg-murky-700"><i class="bi bi-cloud mr-2"></i>Category</a>
-                                <a href="#" class="rounded-lg px-3 py-2 text-murky-200 hover:bg-murky-700" :class="{ 'active': tab === 'services' }" @click.prevent="tab = 'services'; loadServices()"><i class="bi bi-cloud mr-2"></i>Service</a>
-                                
+
+                                <a href="#" class="rounded-lg px-3 py-2 text-murky-200 hover:bg-murky-700" :class="{ 'active': tab === 'tabs' }" @click.prevent="go('tabs')"><i class="bi bi-bookmarks mr-2"></i>Tabs</a>
+                                <a href="#" class="rounded-lg px-3 py-2 text-murky-200 hover:bg-murky-700" :class="{ 'active': tab === 'category' }" @click.prevent="go('category')"><i class="bi bi-grid mr-2"></i>Category</a>
+                                <a href="#" class="rounded-lg px-3 py-2 text-murky-200 hover:bg-murky-700" :class="{ 'active': tab === 'services' }" @click.prevent="go('services')"><i class="bi bi-cloud mr-2"></i>Service</a>
+
                                 <hr class="border-murky-700 my-1">
-                                
-                                <a href="#" class="rounded-lg px-3 py-2 text-murky-200 hover:bg-murky-700"><i class="bi bi-cpu mr-2"></i>Provider</a>
-                                
+
+                                <a href="#" class="rounded-lg px-3 py-2 text-murky-200 hover:bg-murky-700" :class="{ 'active': tab === 'provider' }" @click.prevent="go('provider')"><i class="bi bi-cpu mr-2"></i>Provider</a>
+
                                 <div x-data="{ openMenu: false }">
-                                    <button @click="openMenu = !openMenu" class="w-full flex items-center justify-between rounded-lg px-3 py-2 text-murky-200 hover:bg-murky-700" :class="{ 'active': ['transactions_manage', 'transactions_report', 'transactions_voucher', 'transactions_flashsale'].includes(tab) }">
+                                    <button @click="openMenu = !openMenu" class="w-full flex items-center justify-between rounded-lg px-3 py-2 text-murky-200 hover:bg-murky-700" :class="{ 'active': ['transactions_manage','manual_orders','transactions_report','transactions_voucher','transactions_flashsale'].includes(tab) }">
                                         <span><i class="bi bi-bag mr-2"></i>Transaction</span>
                                         <i class="bi bi-chevron-down text-[10px] transition-transform duration-200" :class="openMenu ? 'rotate-180' : ''"></i>
                                     </button>
                                     <div x-show="openMenu" x-collapse>
                                         <div class="flex flex-col gap-1 pl-8 pr-2 py-1">
-                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700" :class="{ 'text-primary-400': tab === 'transactions_manage' }" @click.prevent="tab = 'transactions_manage'; loadTransactions()">Manage</a>
-                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700">Notifikasi Order Manual</a>
-                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700" :class="{ 'text-primary-400': tab === 'transactions_report' }" @click.prevent="tab = 'transactions_report'">Report</a>
-                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700" :class="{ 'text-primary-400': tab === 'transactions_voucher' }" @click.prevent="tab = 'transactions_voucher'">Voucher</a>
-                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700" :class="{ 'text-primary-400': tab === 'transactions_flashsale' }" @click.prevent="tab = 'transactions_flashsale'">Flashsale</a>
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700" :class="{ 'text-primary-400': tab === 'transactions_manage' }" @click.prevent="go('transactions_manage')">Manage</a>
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700" :class="{ 'text-primary-400': tab === 'manual_orders' }" @click.prevent="go('manual_orders')">Notifikasi Order Manual</a>
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700" :class="{ 'text-primary-400': tab === 'transactions_report' }" @click.prevent="go('transactions_report')">Report</a>
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700" :class="{ 'text-primary-400': tab === 'transactions_voucher' }" @click.prevent="go('transactions_voucher')">Voucher</a>
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700" :class="{ 'text-primary-400': tab === 'transactions_flashsale' }" @click.prevent="go('transactions_flashsale')">Flashsale</a>
                                         </div>
                                     </div>
                                 </div>
-                                
+
                                 <div x-data="{ openMenu: false }">
-                                    <button @click="openMenu = !openMenu" class="w-full flex items-center justify-between rounded-lg px-3 py-2 text-murky-200 hover:bg-murky-700" :class="{ 'active': ['financial_sales', 'financial_profit', 'financial_summary'].includes(tab) }">
+                                    <button @click="openMenu = !openMenu" class="w-full flex items-center justify-between rounded-lg px-3 py-2 text-murky-200 hover:bg-murky-700" :class="{ 'active': ['financial_sales','financial_profit','financial_summary'].includes(tab) }">
                                         <span><i class="bi bi-database mr-2"></i>Financial</span>
                                         <i class="bi bi-chevron-down text-[10px] transition-transform duration-200" :class="openMenu ? 'rotate-180' : ''"></i>
                                     </button>
                                     <div x-show="openMenu" x-collapse>
                                         <div class="flex flex-col gap-1 pl-8 pr-2 py-1">
-                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700" :class="{ 'text-primary-400': tab === 'financial_sales' }" @click.prevent="tab = 'financial_sales'">Sales</a>
-                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700" :class="{ 'text-primary-400': tab === 'financial_profit' }" @click.prevent="tab = 'financial_profit'">Profit</a>
-                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700" :class="{ 'text-primary-400': tab === 'financial_summary' }" @click.prevent="tab = 'financial_summary'">Summary</a>
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700" :class="{ 'text-primary-400': tab === 'financial_sales' }" @click.prevent="go('financial_sales')">Sales</a>
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700" :class="{ 'text-primary-400': tab === 'financial_profit' }" @click.prevent="go('financial_profit')">Profit</a>
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700" :class="{ 'text-primary-400': tab === 'financial_summary' }" @click.prevent="go('financial_summary')">Summary</a>
                                         </div>
                                     </div>
                                 </div>
-                                
+
                                 <hr class="border-murky-700 my-1">
-                                
+
                                 <div x-data="{ openMenu: false }">
-                                    <button @click="openMenu = !openMenu" class="w-full flex items-center justify-between rounded-lg px-3 py-2 text-murky-200 hover:bg-murky-700">
+                                    <button @click="openMenu = !openMenu" class="w-full flex items-center justify-between rounded-lg px-3 py-2 text-murky-200 hover:bg-murky-700" :class="{ 'active': ['deposit_manage','deposit_report','deposit_method'].includes(tab) }">
                                         <span><i class="bi bi-credit-card mr-2"></i>Deposit</span>
                                         <i class="bi bi-chevron-down text-[10px] transition-transform duration-200" :class="openMenu ? 'rotate-180' : ''"></i>
                                     </button>
                                     <div x-show="openMenu" x-collapse>
                                         <div class="flex flex-col gap-1 pl-8 pr-2 py-1">
-                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700">Manage</a>
-                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700">Report</a>
-                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700">Method</a>
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700" :class="{ 'text-primary-400': tab === 'deposit_manage' }" @click.prevent="go('deposit_manage')">Manage</a>
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700" :class="{ 'text-primary-400': tab === 'deposit_report' }" @click.prevent="go('deposit_report')">Report</a>
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700" :class="{ 'text-primary-400': tab === 'deposit_method' }" @click.prevent="go('deposit_method')">Method</a>
                                         </div>
                                     </div>
                                 </div>
-                                
+
                                 <div x-data="{ openMenu: false }">
-                                    <button @click="openMenu = !openMenu" class="w-full flex items-center justify-between rounded-lg px-3 py-2 text-murky-200 hover:bg-murky-700">
+                                    <button @click="openMenu = !openMenu" class="w-full flex items-center justify-between rounded-lg px-3 py-2 text-murky-200 hover:bg-murky-700" :class="{ 'active': ['server_cronsjob','server_errorlog'].includes(tab) }">
                                         <span><i class="bi bi-box mr-2"></i>Server Act.</span>
                                         <i class="bi bi-chevron-down text-[10px] transition-transform duration-200" :class="openMenu ? 'rotate-180' : ''"></i>
                                     </button>
                                     <div x-show="openMenu" x-collapse>
                                         <div class="flex flex-col gap-1 pl-8 pr-2 py-1">
-                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700">Cronsjob</a>
-                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700">Error Log</a>
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700" :class="{ 'text-primary-400': tab === 'server_cronsjob' }" @click.prevent="go('server_cronsjob')">Cronsjob</a>
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700" :class="{ 'text-primary-400': tab === 'server_errorlog' }" @click.prevent="go('server_errorlog')">Error Log</a>
                                         </div>
                                     </div>
                                 </div>
-                                
+
                                 <div x-data="{ openMenu: false }">
-                                    <button @click="openMenu = !openMenu" class="w-full flex items-center justify-between rounded-lg px-3 py-2 text-murky-200 hover:bg-murky-700">
+                                    <button @click="openMenu = !openMenu" class="w-full flex items-center justify-between rounded-lg px-3 py-2 text-murky-200 hover:bg-murky-700" :class="{ 'active': ['get_digiflazz','get_vipayment','get_keypedia'].includes(tab) }">
                                         <span><i class="bi bi-arrow-repeat mr-2"></i>Get Layanan</span>
                                         <i class="bi bi-chevron-down text-[10px] transition-transform duration-200" :class="openMenu ? 'rotate-180' : ''"></i>
                                     </button>
                                     <div x-show="openMenu" x-collapse>
                                         <div class="flex flex-col gap-1 pl-8 pr-2 py-1">
-                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700">DIGIFLAZZ</a>
-                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700">VIPAYMENT</a>
-                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700">KEYPEDIA</a>
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700" :class="{ 'text-primary-400': tab === 'get_digiflazz' }" @click.prevent="go('get_digiflazz')">DIGIFLAZZ</a>
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700" :class="{ 'text-primary-400': tab === 'get_vipayment' }" @click.prevent="go('get_vipayment')">VIPAYMENT</a>
+                                            <a href="#" class="rounded-lg px-3 py-1.5 text-murky-200 hover:bg-murky-700" :class="{ 'text-primary-400': tab === 'get_keypedia' }" @click.prevent="go('get_keypedia')">KEYPEDIA</a>
                                         </div>
                                     </div>
                                 </div>
-                                
+
                                 <hr class="border-murky-700 my-1">
                                 <a href="#" class="rounded-lg px-3 py-2 text-red-400 hover:bg-murky-700 mt-2" @click.prevent="logout"><i class="bi bi-box-arrow-right mr-2"></i>Keluar</a>
                             </nav>
                         </div>
                     </div>
+
+                    <!-- ============ CONTENT ============ -->
                     <div class="md:col-span-4 space-y-6">
-                        <!-- Dashboard -->
+
+                        <!-- Dashboard Statistics -->
                         <template x-if="tab === 'dashboard'">
                             <div class="space-y-6">
                                 <div class="rounded-xl bg-murky-800 p-6">
+                                    <h2 class="text-xl font-bold mb-4">Statistik Platform</h2>
+                                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                                        <div class="rounded-lg bg-murky-700 p-4"><div class="text-xs text-murky-300">Total Users</div><div class="text-xl font-bold mt-1" x-text="stats.total_users || 0"></div></div>
+                                        <div class="rounded-lg bg-murky-700 p-4"><div class="text-xs text-murky-300">Total Saldo Users</div><div class="text-xl font-bold mt-1">Rp <span x-text="fmt(stats.total_balance)"></span></div></div>
+                                        <div class="rounded-lg bg-murky-700 p-4"><div class="text-xs text-murky-300">Total Deposit</div><div class="text-xl font-bold text-green-400 mt-1">Rp <span x-text="fmt(stats.total_deposit_amount)"></span></div></div>
+                                        <div class="rounded-lg bg-murky-700 p-4"><div class="text-xs text-murky-300">Total Transaksi</div><div class="text-xl font-bold mt-1" x-text="stats.total_trx || 0"></div></div>
+                                        <div class="rounded-lg bg-murky-700 p-4"><div class="text-xs text-murky-300">Sukses</div><div class="text-xl font-bold text-emerald-400 mt-1" x-text="stats.success_trx || 0"></div></div>
+                                        <div class="rounded-lg bg-murky-700 p-4"><div class="text-xs text-murky-300">Pending/Process</div><div class="text-xl font-bold text-yellow-400 mt-1" x-text="stats.pending_trx || 0"></div></div>
+                                        <div class="rounded-lg bg-murky-700 p-4"><div class="text-xs text-murky-300">Error/System</div><div class="text-xl font-bold text-red-400 mt-1" x-text="stats.error_trx || 0"></div></div>
+                                        <div class="rounded-lg bg-murky-700 p-4"><div class="text-xs text-murky-300">Revenue Hari Ini</div><div class="text-xl font-bold text-green-400 mt-1">Rp <span x-text="fmt(stats.revenue_today)"></span></div></div>
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                                    <template x-for="chart in [{ title: 'Order 7 Hari', key: 'orders_series' }, { title: 'Deposit 7 Hari', key: 'deposits_series' }, { title: 'User Baru 7 Hari', key: 'users_series' }]" :key="chart.key">
+                                        <div class="rounded-xl bg-murky-800 p-5">
+                                            <h3 class="text-sm font-semibold mb-3" x-text="chart.title"></h3>
+                                            <div class="bar-chart">
+                                                <template x-for="(p, i) in (stats[chart.key] || [])" :key="i">
+                                                    <div :style="'height:' + barHeight(p.value, stats[chart.key]) + '%'" :title="p.date + ': ' + p.value"></div>
+                                                </template>
+                                            </div>
+                                        </div>
+                                    </template>
+                                </div>
+                                <div class="rounded-xl bg-murky-800 p-6">
                                     <h2 class="text-xl font-bold mb-4">Ringkasan Keuangan</h2>
                                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                                        <div class="rounded-lg bg-murky-700 p-4">
-                                            <div class="text-xs text-murky-300">Total Transaksi</div>
-                                            <div class="text-xl font-bold mt-1" x-text="summary.total_transactions || 0"></div>
-                                        </div>
-                                        <div class="rounded-lg bg-murky-700 p-4">
-                                            <div class="text-xs text-murky-300">Volume Penjualan</div>
-                                            <div class="text-xl font-bold text-green-400 mt-1">Rp <span x-text="fmt(summary.total_sales_volume)"></span></div>
-                                        </div>
-                                        <div class="rounded-lg bg-murky-700 p-4">
-                                            <div class="text-xs text-murky-300">Laba Kotor</div>
-                                            <div class="text-xl font-bold text-green-400 mt-1">Rp <span x-text="fmt(summary.total_gross_profit)"></span></div>
-                                        </div>
-                                        <div class="rounded-lg bg-murky-700 p-4">
-                                            <div class="text-xs text-murky-300">Pending / Sukses</div>
-                                            <div class="text-xl font-bold mt-1"><span class="text-yellow-400" x-text="summary.pending_orders_count || 0"></span> / <span class="text-green-400" x-text="summary.success_orders_count || 0"></span></div>
-                                        </div>
+                                        <div class="rounded-lg bg-murky-700 p-4"><div class="text-xs text-murky-300">Total Transaksi</div><div class="text-xl font-bold mt-1" x-text="summary.total_transactions || 0"></div></div>
+                                        <div class="rounded-lg bg-murky-700 p-4"><div class="text-xs text-murky-300">Volume Penjualan</div><div class="text-xl font-bold text-green-400 mt-1">Rp <span x-text="fmt(summary.total_sales_volume)"></span></div></div>
+                                        <div class="rounded-lg bg-murky-700 p-4"><div class="text-xs text-murky-300">Laba Kotor</div><div class="text-xl font-bold text-green-400 mt-1">Rp <span x-text="fmt(summary.total_gross_profit)"></span></div></div>
+                                        <div class="rounded-lg bg-murky-700 p-4"><div class="text-xs text-murky-300">Pending / Sukses</div><div class="text-xl font-bold mt-1"><span class="text-yellow-400" x-text="summary.pending_orders_count || 0"></span> / <span class="text-green-400" x-text="summary.success_orders_count || 0"></span></div></div>
                                     </div>
                                 </div>
                             </div>
                         </template>
 
-                        <!-- Services -->
-                        <template x-if="tab === 'services'">
-                            <div class="rounded-xl bg-murky-800 overflow-hidden">
-                                <div class="p-5 border-b border-murky-700 flex justify-between items-center">
-                                    <span class="font-semibold">Daftar Layanan</span>
-                                    <a href="/" class="text-xs text-primary-400 hover:underline">+ Tambah via form admin (belum tersedia di CSR)</a>
+                        <!-- Dashboard Devices -->
+                        <template x-if="tab === 'dashboard_devices'">
+                            <div class="rounded-xl bg-murky-800 p-6">
+                                <h2 class="text-xl font-bold mb-4">Perangkat Pengunjung</h2>
+                                <p class="text-sm text-murky-300 mb-4">Data sesi perangkat terkumpul otomatis di tabel <code class="text-primary-400">users_cookie</code> setiap login (UA, OS, browser, IP).</p>
+                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                    <div class="rounded-lg bg-murky-700 p-4 text-center"><i class="bi bi-phone text-3xl text-primary-400"></i><div class="mt-2 text-sm">Mobile / Android dominan</div></div>
+                                    <div class="rounded-lg bg-murky-700 p-4 text-center"><i class="bi bi-laptop text-3xl text-primary-400"></i><div class="mt-2 text-sm">Desktop via m-banking</div></div>
+                                    <div class="rounded-lg bg-murky-700 p-4 text-center"><i class="bi bi-globe text-3xl text-primary-400"></i><div class="mt-2 text-sm">Browser Chrome terbanyak</div></div>
                                 </div>
-                                <table class="w-full text-sm">
-                                    <thead class="bg-murky-700/50 text-xs text-murky-300">
-                                        <tr>
-                                            <th class="text-left px-5 py-3">Kode</th>
-                                            <th class="text-left px-5 py-3">Nama</th>
-                                            <th class="text-left px-5 py-3">Game</th>
-                                            <th class="text-right px-5 py-3">Harga</th>
-                                            <th class="text-right px-5 py-3">Tamu</th>
-                                            <th class="text-left px-5 py-3">Provider</th>
-                                            <th class="text-left px-5 py-3">Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody class="divide-y divide-murky-700">
-                                        <template x-for="s in services" :key="s.id">
-                                            <tr>
-                                                <td class="px-5 py-3 text-xs font-mono" x-text="s.code"></td>
-                                                <td class="px-5 py-3 text-xs" x-text="s.name"></td>
-                                                <td class="px-5 py-3 text-xs" x-text="s.game"></td>
-                                                <td class="px-5 py-3 text-right text-xs" x-text="'Rp ' + fmt(s.price)"></td>
-                                                <td class="px-5 py-3 text-right text-xs" x-text="'Rp ' + fmt(s.tamu)"></td>
-                                                <td class="px-5 py-3 text-xs" x-text="s.provider"></td>
-                                                <td class="px-5 py-3"><span class="px-2 py-0.5 rounded text-xs font-semibold" :class="s.status === 'available' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'" x-text="s.status"></span></td>
-                                            </tr>
-                                        </template>
-                                        <template x-if="services.length === 0"><tr><td colspan="7" class="px-5 py-8 text-center text-murky-400">Tidak ada layanan</td></tr></template>
-                                    </tbody>
-                                </table>
                             </div>
                         </template>
 
-                        <!-- Transactions -->
-                        <template x-if="tab === 'transactions_manage'">
-                            <div class="rounded-xl bg-murky-800 overflow-hidden">
-                                <div class="p-5 border-b border-murky-700 font-semibold">Daftar Transaksi</div>
-                                <table class="w-full text-sm">
-                                    <thead class="bg-murky-700/50 text-xs text-murky-300">
-                                        <tr>
-                                            <th class="text-left px-5 py-3">Invoice</th>
-                                            <th class="text-left px-5 py-3">User</th>
-                                            <th class="text-left px-5 py-3">Layanan</th>
-                                            <th class="text-right px-5 py-3">Harga</th>
-                                            <th class="text-left px-5 py-3">Status</th>
-                                            <th class="text-left px-5 py-3">Pembayaran</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody class="divide-y divide-murky-700">
-                                        <template x-for="t in transactions" :key="t.order_id">
-                                            <tr>
-                                                <td class="px-5 py-3 text-xs font-mono text-orange-400" x-text="t.order_id"></td>
-                                                <td class="px-5 py-3 text-xs" x-text="t.user"></td>
-                                                <td class="px-5 py-3 text-xs" x-text="t.service_name"></td>
-                                                <td class="px-5 py-3 text-right text-xs font-semibold" x-text="'Rp ' + fmt(t.price)"></td>
-                                                <td class="px-5 py-3"><span class="px-2 py-0.5 rounded text-xs font-semibold" :class="statusClass(t.status)" x-text="t.status"></span></td>
-                                                <td class="px-5 py-3"><span class="px-2 py-0.5 rounded text-xs font-semibold" :class="t.status_payment === 'paid' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-yellow-500/20 text-yellow-300'" x-text="t.status_payment"></span></td>
-                                            </tr>
+                        <!-- Dashboard Revenue -->
+                        <template x-if="tab === 'dashboard_revenue'">
+                            <div class="space-y-6">
+                                <div class="rounded-xl bg-murky-800 p-6">
+                                    <h2 class="text-xl font-bold mb-4">Revenue</h2>
+                                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                                        <div class="rounded-lg bg-murky-700 p-4"><div class="text-xs text-murky-300">Total Revenue</div><div class="text-xl font-bold text-green-400 mt-1">Rp <span x-text="fmt(stats.revenue_total)"></span></div></div>
+                                        <div class="rounded-lg bg-murky-700 p-4"><div class="text-xs text-murky-300">Total Profit</div><div class="text-xl font-bold text-green-400 mt-1">Rp <span x-text="fmt(stats.profit_total)"></span></div></div>
+                                        <div class="rounded-lg bg-murky-700 p-4"><div class="text-xs text-murky-300">Revenue Bulan Ini</div><div class="text-xl font-bold mt-1">Rp <span x-text="fmt(stats.revenue_month)"></span></div></div>
+                                        <div class="rounded-lg bg-murky-700 p-4"><div class="text-xs text-murky-300">Revenue Hari Ini</div><div class="text-xl font-bold mt-1">Rp <span x-text="fmt(stats.revenue_today)"></span></div></div>
+                                    </div>
+                                </div>
+                                <div class="rounded-xl bg-murky-800 p-5">
+                                    <h3 class="text-sm font-semibold mb-3">Order 7 Hari Terakhir</h3>
+                                    <div class="bar-chart">
+                                        <template x-for="(p, i) in (stats.orders_series || [])" :key="i">
+                                            <div :style="'height:' + barHeight(p.value, stats.orders_series) + '%'" :title="p.date + ': ' + p.value"></div>
                                         </template>
-                                        <template x-if="transactions.length === 0"><tr><td colspan="6" class="px-5 py-8 text-center text-murky-400">Tidak ada transaksi</td></tr></template>
-                                    </tbody>
-                                </table>
+                                    </div>
+                                </div>
                             </div>
                         </template>
 
-                        <!-- Users -->
+                        <!-- Users Manage -->
                         <template x-if="tab === 'users_manage'">
                             <div class="rounded-xl bg-murky-800 overflow-hidden">
-                                <div class="p-5 border-b border-murky-700 font-semibold">Daftar Pengguna</div>
+                                <div class="p-5 border-b border-murky-700 flex justify-between items-center">
+                                    <span class="font-semibold">Daftar Pengguna</span>
+                                    <button @click="openModal('user_add')" class="rounded-md bg-primary-500 px-3 py-1.5 text-xs font-medium hover:bg-primary-400">+ Tambah User</button>
+                                </div>
                                 <table class="w-full text-sm">
                                     <thead class="bg-murky-700/50 text-xs text-murky-300">
                                         <tr>
@@ -369,6 +335,7 @@
                                             <th class="text-left px-5 py-3">Email</th>
                                             <th class="text-right px-5 py-3">Saldo</th>
                                             <th class="text-left px-5 py-3">Level</th>
+                                            <th class="text-left px-5 py-3">Aksi</th>
                                         </tr>
                                     </thead>
                                     <tbody class="divide-y divide-murky-700">
@@ -379,14 +346,964 @@
                                                 <td class="px-5 py-3 text-xs" x-text="u.email || '-'"></td>
                                                 <td class="px-5 py-3 text-right text-xs" x-text="'Rp ' + fmt(u.balance)"></td>
                                                 <td class="px-5 py-3"><span class="px-2 py-0.5 rounded text-xs font-semibold" :class="u.level === 'Admin' ? 'bg-purple-500/20 text-purple-300' : u.level === 'Reseller' ? 'bg-blue-500/20 text-blue-300' : 'bg-gray-500/20 text-gray-300'" x-text="u.level"></span></td>
+                                                <td class="px-5 py-3">
+                                                    <div class="flex gap-1 flex-wrap">
+                                                        <button @click="openModal('user_edit', u)" class="text-xs px-2 py-1 rounded bg-blue-500/20 text-blue-300 hover:bg-blue-500/30">Edit</button>
+                                                        <button @click="openModal('user_balance', u)" class="text-xs px-2 py-1 rounded bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30">Saldo</button>
+                                                        <button @click="openModal('user_lock', u)" class="text-xs px-2 py-1 rounded bg-red-500/20 text-red-300 hover:bg-red-500/30">Lock</button>
+                                                    </div>
+                                                </td>
                                             </tr>
                                         </template>
-                                        <template x-if="users.length === 0"><tr><td colspan="5" class="px-5 py-8 text-center text-murky-400">Tidak ada pengguna</td></tr></template>
+                                        <template x-if="users.length === 0"><tr><td colspan="6" class="px-5 py-8 text-center text-murky-400">Tidak ada pengguna</td></tr></template>
                                     </tbody>
                                 </table>
                             </div>
                         </template>
+
+                        <!-- Users Locked -->
+                        <template x-if="tab === 'users_locked'">
+                            <div class="rounded-xl bg-murky-800 overflow-hidden">
+                                <div class="p-5 border-b border-murky-700 font-semibold">Akun Terkunci</div>
+                                <table class="w-full text-sm">
+                                    <thead class="bg-murky-700/50 text-xs text-murky-300">
+                                        <tr><th class="text-left px-5 py-3">Username</th><th class="text-left px-5 py-3">Alasan</th><th class="text-left px-5 py-3">Tanggal</th><th class="text-left px-5 py-3">Aksi</th></tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-murky-700">
+                                        <template x-for="(l, i) in lockedUsers" :key="i">
+                                            <tr>
+                                                <td class="px-5 py-3 text-xs font-semibold" x-text="l.user"></td>
+                                                <td class="px-5 py-3 text-xs" x-text="l.reason || '-'"></td>
+                                                <td class="px-5 py-3 text-xs" x-text="l.date_cr || '-'"></td>
+                                                <td class="px-5 py-3"><button @click="unlockUser(l.user)" class="text-xs px-2 py-1 rounded bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30">Unlock</button></td>
+                                            </tr>
+                                        </template>
+                                        <template x-if="lockedUsers.length === 0"><tr><td colspan="4" class="px-5 py-8 text-center text-murky-400">Tidak ada akun terkunci</td></tr></template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </template>
+
+                        <!-- Users Mutation -->
+                        <template x-if="tab === 'users_mutation'">
+                            <div class="rounded-xl bg-murky-800 overflow-hidden">
+                                <div class="p-5 border-b border-murky-700 font-semibold">Mutasi Saldo Semua User</div>
+                                <table class="w-full text-sm">
+                                    <thead class="bg-murky-700/50 text-xs text-murky-300">
+                                        <tr><th class="text-left px-5 py-3">Tanggal</th><th class="text-left px-5 py-3">Username</th><th class="text-left px-5 py-3">Keterangan</th><th class="text-right px-5 py-3">Jumlah</th></tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-murky-700">
+                                        <template x-for="(m, i) in mutations" :key="i">
+                                            <tr>
+                                                <td class="px-5 py-3 text-xs" x-text="m.date_cr"></td>
+                                                <td class="px-5 py-3 text-xs font-semibold" x-text="m.username"></td>
+                                                <td class="px-5 py-3 text-xs" x-text="m.note"></td>
+                                                <td class="px-5 py-3 text-right text-xs font-semibold" :class="m.type === '+' ? 'text-emerald-400' : 'text-red-400'" x-text="(m.type === '+' ? '+' : '-') + ' Rp ' + fmt(m.amount)"></td>
+                                            </tr>
+                                        </template>
+                                        <template x-if="mutations.length === 0"><tr><td colspan="4" class="px-5 py-8 text-center text-murky-400">Tidak ada mutasi</td></tr></template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </template>
+
+                        <!-- Users Activity -->
+                        <template x-if="tab === 'users_activity'">
+                            <div class="rounded-xl bg-murky-800 p-6">
+                                <h2 class="text-xl font-bold mb-2">Aktivitas User</h2>
+                                <p class="text-sm text-murky-300">Log aktivitas sesi login tersimpan di tabel <code class="text-primary-400">users_cookie</code>. Gunakan menu Mutation untuk melihat riwayat transaksi saldo, atau Error Log untuk log sistem.</p>
+                            </div>
+                        </template>
+
+                        <!-- Config Website -->
+                        <template x-if="tab === 'config_website'">
+                            <div class="rounded-xl bg-murky-800 p-6">
+                                <h2 class="text-xl font-bold mb-4">Konfigurasi Website</h2>
+                                <form @submit.prevent="saveWebsiteConfig" class="space-y-4 max-w-xl">
+                                    <div><label class="form-label">Judul Website</label><input type="text" class="form-input" x-model="webCfg.title"></div>
+                                    <div><label class="form-label">Teks Navbar</label><input type="text" class="form-input" x-model="webCfg.navbar"></div>
+                                    <div><label class="form-label">Deskripsi</label><textarea class="form-input" rows="2" x-model="webCfg.description"></textarea></div>
+                                    <div><label class="form-label">Keyword</label><input type="text" class="form-input" x-model="webCfg.keyword"></div>
+                                    <div><label class="form-label">Banner (URL)</label><input type="text" class="form-input" x-model="webCfg.banner"></div>
+                                    <div><label class="form-label">Icon (URL)</label><input type="text" class="form-input" x-model="webCfg.icon"></div>
+                                    <button type="submit" class="rounded-md bg-primary-500 px-4 py-2 text-sm font-medium hover:bg-primary-400">Simpan Konfigurasi</button>
+                                </form>
+                            </div>
+                        </template>
+
+                        <!-- Config Pages -->
+                        <template x-if="tab === 'config_pages'">
+                            <div class="rounded-xl bg-murky-800 p-6">
+                                <h2 class="text-xl font-bold mb-4">Terms & Privacy</h2>
+                                <form @submit.prevent="savePagesConfig" class="space-y-4">
+                                    <div><label class="form-label">Syarat & Ketentuan (HTML)</label><textarea class="form-input font-mono" rows="8" x-model="pagesCfg.terms"></textarea></div>
+                                    <div><label class="form-label">Kebijakan Privasi (HTML)</label><textarea class="form-input font-mono" rows="8" x-model="pagesCfg.privacy"></textarea></div>
+                                    <button type="submit" class="rounded-md bg-primary-500 px-4 py-2 text-sm font-medium hover:bg-primary-400">Simpan Halaman</button>
+                                </form>
+                            </div>
+                        </template>
+
+                        <!-- Config FAQ -->
+                        <template x-if="tab === 'config_faq'">
+                            <div class="rounded-xl bg-murky-800 p-6">
+                                <h2 class="text-xl font-bold mb-2">General Questions (FAQ)</h2>
+                                <p class="text-sm text-murky-300">FAQ dapat dikelola melalui halaman legal di menu Terms and Privacy, atau langsung pada tabel <code class="text-primary-400">conf</code> kode <code class="text-primary-400">faq</code> di database web.</p>
+                            </div>
+                        </template>
+
+                        <!-- Config Prefix -->
+                        <template x-if="tab === 'config_prefix'">
+                            <div class="rounded-xl bg-murky-800 p-6">
+                                <h2 class="text-xl font-bold mb-2">Prefix ID</h2>
+                                <p class="text-sm text-murky-300 mb-4">Format ID transaksi (<code class="text-primary-400">ORDyymmddhhmmss+rand</code>) dan deposit (<code class="text-primary-400">DPyymmddhhmm+rand</code>) sudah mengikuti standar sistem baru.</p>
+                                <div class="grid sm:grid-cols-2 gap-4 text-sm">
+                                    <div class="rounded-lg bg-murky-700 p-4"><div class="text-xs text-murky-300 mb-1">Prefix Transaksi</div><code>ORD</code></div>
+                                    <div class="rounded-lg bg-murky-700 p-4"><div class="text-xs text-murky-300 mb-1">Prefix Deposit</div><code>DP</code></div>
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- Config Others -->
+                        <template x-if="tab === 'config_others'">
+                            <div class="rounded-xl bg-murky-800 p-6">
+                                <h2 class="text-xl font-bold mb-2">Konfigurasi Lainnya</h2>
+                                <ul class="text-sm text-murky-300 space-y-2 list-disc list-inside">
+                                    <li>Hold balance per level dikontrol via environment: <code class="text-primary-400">HOLD_BALANCE_MEMBER / RESELLER / ADMIN</code>.</li>
+                                    <li>Captcha Turnstile dibaca dari konfigurasi database saat login/register.</li>
+                                    <li>Maintenance mode & fitur tambahan dikelola di sisi fulfillment service.</li>
+                                </ul>
+                            </div>
+                        </template>
+
+                        <!-- Others Banner -->
+                        <template x-if="tab === 'others_banner'">
+                            <div class="rounded-xl bg-murky-800 overflow-hidden">
+                                <div class="p-5 border-b border-murky-700 flex justify-between items-center gap-3">
+                                    <span class="font-semibold">Banner Carousel</span>
+                                    <form @submit.prevent="addBanner" class="flex gap-2">
+                                        <input type="url" required class="form-input !w-72" placeholder="https://.../banner.webp" x-model="newBanner">
+                                        <button type="submit" class="rounded-md bg-primary-500 px-3 py-1.5 text-xs font-medium hover:bg-primary-400">Tambah</button>
+                                    </form>
+                                </div>
+                                <table class="w-full text-sm">
+                                    <thead class="bg-murky-700/50 text-xs text-murky-300"><tr><th class="text-left px-5 py-3">ID</th><th class="text-left px-5 py-3">Preview</th><th class="text-left px-5 py-3">URL</th><th class="text-left px-5 py-3">Aksi</th></tr></thead>
+                                    <tbody class="divide-y divide-murky-700">
+                                        <template x-for="b in banners" :key="b.id">
+                                            <tr>
+                                                <td class="px-5 py-3 text-xs" x-text="b.id"></td>
+                                                <td class="px-5 py-3"><img :src="b.content" class="h-10 rounded object-cover" onerror="this.style.display='none'"></td>
+                                                <td class="px-5 py-3 text-xs break-all max-w-xs" x-text="b.content"></td>
+                                                <td class="px-5 py-3"><button @click="deleteItem('/api/admin/banner/delete', b.id, loadBanners)" class="text-xs px-2 py-1 rounded bg-red-500/20 text-red-300 hover:bg-red-500/30">Hapus</button></td>
+                                            </tr>
+                                        </template>
+                                        <template x-if="banners.length === 0"><tr><td colspan="4" class="px-5 py-8 text-center text-murky-400">Belum ada banner</td></tr></template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </template>
+
+                        <!-- Others Social -->
+                        <template x-if="tab === 'others_social'">
+                            <div class="rounded-xl bg-murky-800 p-6">
+                                <h2 class="text-xl font-bold mb-4">Social Links</h2>
+                                <form @submit.prevent="saveConf('social', socialCfg)" class="space-y-4 max-w-xl">
+                                    <div><label class="form-label">WhatsApp</label><input type="text" class="form-input" x-model="socialCfg.c1"></div>
+                                    <div><label class="form-label">Instagram</label><input type="text" class="form-input" x-model="socialCfg.c2"></div>
+                                    <div><label class="form-label">Tiktok</label><input type="text" class="form-input" x-model="socialCfg.c3"></div>
+                                    <div><label class="form-label">Facebook</label><input type="text" class="form-input" x-model="socialCfg.c4"></div>
+                                    <div><label class="form-label">Email (footer)</label><input type="text" class="form-input" x-model="socialCfg.c5"></div>
+                                    <button type="submit" class="rounded-md bg-primary-500 px-4 py-2 text-sm font-medium hover:bg-primary-400">Simpan</button>
+                                </form>
+                            </div>
+                        </template>
+
+                        <!-- Others Color -->
+                        <template x-if="tab === 'others_color'">
+                            <div class="rounded-xl bg-murky-800 p-6">
+                                <h2 class="text-xl font-bold mb-4">Warna Tema</h2>
+                                <form @submit.prevent="saveConf('color', colorCfg)" class="space-y-4 max-w-xl">
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div><label class="form-label">Warna Utama (c1)</label><input type="color" class="form-input h-10" x-model="colorCfg.c1"></div>
+                                        <div><label class="form-label">Warna Kedua (c2)</label><input type="color" class="form-input h-10" x-model="colorCfg.c2"></div>
+                                        <div><label class="form-label">Aksen (c3)</label><input type="color" class="form-input h-10" x-model="colorCfg.c3"></div>
+                                        <div><label class="form-label">Body (c4)</label><input type="color" class="form-input h-10" x-model="colorCfg.c4"></div>
+                                    </div>
+                                    <button type="submit" class="rounded-md bg-primary-500 px-4 py-2 text-sm font-medium hover:bg-primary-400">Simpan Warna</button>
+                                </form>
+                            </div>
+                        </template>
+
+                        <!-- Others Notification -->
+                        <template x-if="tab === 'others_notification'">
+                            <div class="rounded-xl bg-murky-800 p-6">
+                                <h2 class="text-xl font-bold mb-2">Template Notifikasi WhatsApp</h2>
+                                <p class="text-sm text-murky-300 mb-4">Template OTP register, notifikasi transaksi & deposit tersimpan base64 di tabel <code class="text-primary-400">conf</code> kode <code class="text-primary-400">notification</code>, dan digateway via MPWA (env: <code class="text-primary-400">MPWA_API_KEY</code>, <code class="text-primary-400">MPWA_SENDER_PHONE</code>).</p>
+                                <div class="grid sm:grid-cols-3 gap-4 text-sm">
+                                    <div class="rounded-lg bg-murky-700 p-4"><div class="font-semibold mb-1">Register OTP</div><div class="text-xs text-murky-300">Placeholder <code>{{ OTP }}</code></div></div>
+                                    <div class="rounded-lg bg-murky-700 p-4"><div class="font-semibold mb-1">Transaksi</div><div class="text-xs text-murky-300">Status sukses/gagal dikirim otomatis</div></div>
+                                    <div class="rounded-lg bg-murky-700 p-4"><div class="font-semibold mb-1">Deposit</div><div class="text-xs text-murky-300">Notifikasi saat deposit lunas</div></div>
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- Others Popup -->
+                        <template x-if="tab === 'others_popup'">
+                            <div class="rounded-xl bg-murky-800 p-6">
+                                <h2 class="text-xl font-bold mb-4">Popup Pengumuman</h2>
+                                <form @submit.prevent="savePopup" class="space-y-4 max-w-xl">
+                                    <div><label class="form-label">Gambar (URL)</label><input type="text" class="form-input" x-model="popupCfg.image"></div>
+                                    <div><label class="form-label">Judul</label><input type="text" class="form-input" x-model="popupCfg.subtitle"></div>
+                                    <div><label class="form-label">Konten (base64/teks)</label><textarea class="form-input" rows="3" x-model="popupCfg.content"></textarea></div>
+                                    <div><label class="form-label">Status</label>
+                                        <select class="form-input" x-model="popupCfg.show">
+                                            <option value="display">Tampilkan</option>
+                                            <option value="">Sembunyikan</option>
+                                        </select>
+                                    </div>
+                                    <button type="submit" class="rounded-md bg-primary-500 px-4 py-2 text-sm font-medium hover:bg-primary-400">Simpan Popup</button>
+                                </form>
+                            </div>
+                        </template>
+
+                        <!-- Others Blog -->
+                        <template x-if="tab === 'others_blog'">
+                            <div class="rounded-xl bg-murky-800 overflow-hidden">
+                                <div class="p-5 border-b border-murky-700 flex justify-between items-center">
+                                    <span class="font-semibold">Artikel Blog</span>
+                                    <button @click="openModal('blog_edit', null)" class="rounded-md bg-primary-500 px-3 py-1.5 text-xs font-medium hover:bg-primary-400">+ Artikel Baru</button>
+                                </div>
+                                <table class="w-full text-sm">
+                                    <thead class="bg-murky-700/50 text-xs text-murky-300"><tr><th class="text-left px-5 py-3">Judul</th><th class="text-left px-5 py-3">Banner</th><th class="text-left px-5 py-3">Aksi</th></tr></thead>
+                                    <tbody class="divide-y divide-murky-700">
+                                        <template x-for="b in blogList" :key="b.id">
+                                            <tr>
+                                                <td class="px-5 py-3 text-xs" x-text="b.title"></td>
+                                                <td class="px-5 py-3"><img :src="b.banner" class="h-10 rounded object-cover" onerror="this.style.display='none'"></td>
+                                                <td class="px-5 py-3">
+                                                    <div class="flex gap-1">
+                                                        <button @click="openModal('blog_edit', b)" class="text-xs px-2 py-1 rounded bg-blue-500/20 text-blue-300 hover:bg-blue-500/30">Edit</button>
+                                                        <button @click="deleteItem('/api/admin/blog/delete', b.id, loadBlog)" class="text-xs px-2 py-1 rounded bg-red-500/20 text-red-300 hover:bg-red-500/30">Hapus</button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </template>
+                                        <template x-if="blogList.length === 0"><tr><td colspan="3" class="px-5 py-8 text-center text-murky-400">Belum ada artikel</td></tr></template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </template>
+
+                        <!-- Tabs Manager -->
+                        <template x-if="tab === 'tabs'">
+                            <div class="rounded-xl bg-murky-800 overflow-hidden">
+                                <div class="p-5 border-b border-murky-700 flex justify-between items-center">
+                                    <span class="font-semibold">Tab Kategori</span>
+                                    <button @click="openModal('tab_edit', null)" class="rounded-md bg-primary-500 px-3 py-1.5 text-xs font-medium hover:bg-primary-400">+ Tab Baru</button>
+                                </div>
+                                <table class="w-full text-sm">
+                                    <thead class="bg-murky-700/50 text-xs text-murky-300"><tr><th class="text-left px-5 py-3">Urutan</th><th class="text-left px-5 py-3">Nama</th><th class="text-left px-5 py-3">Icon</th><th class="text-left px-5 py-3">Type</th><th class="text-left px-5 py-3">Aksi</th></tr></thead>
+                                    <tbody class="divide-y divide-murky-700">
+                                        <template x-for="t in tabsList" :key="t.id">
+                                            <tr>
+                                                <td class="px-5 py-3 text-xs" x-text="t.order"></td>
+                                                <td class="px-5 py-3 text-xs font-semibold" x-text="t.name"></td>
+                                                <td class="px-5 py-3 text-xs" x-text="t.icon || '-'"></td>
+                                                <td class="px-5 py-3 text-xs" x-text="t.type"></td>
+                                                <td class="px-5 py-3">
+                                                    <div class="flex gap-1">
+                                                        <button @click="openModal('tab_edit', t)" class="text-xs px-2 py-1 rounded bg-blue-500/20 text-blue-300 hover:bg-blue-500/30">Edit</button>
+                                                        <button @click="deleteItem('/api/admin/tab/delete', t.id, loadTabs)" class="text-xs px-2 py-1 rounded bg-red-500/20 text-red-300 hover:bg-red-500/30">Hapus</button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </template>
+                                        <template x-if="tabsList.length === 0"><tr><td colspan="5" class="px-5 py-8 text-center text-murky-400">Belum ada tab</td></tr></template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </template>
+
+                        <!-- Category Manager -->
+                        <template x-if="tab === 'category'">
+                            <div class="rounded-xl bg-murky-800 overflow-hidden">
+                                <div class="p-5 border-b border-murky-700 flex justify-between items-center">
+                                    <span class="font-semibold">Kategori Produk</span>
+                                    <button @click="openModal('cat_edit', null)" class="rounded-md bg-primary-500 px-3 py-1.5 text-xs font-medium hover:bg-primary-400">+ Kategori Baru</button>
+                                </div>
+                                <table class="w-full text-sm">
+                                    <thead class="bg-murky-700/50 text-xs text-murky-300"><tr><th class="text-left px-5 py-3">Nama</th><th class="text-left px-5 py-3">Owner</th><th class="text-left px-5 py-3">Type</th><th class="text-left px-5 py-3">Populer</th><th class="text-left px-5 py-3">Aksi</th></tr></thead>
+                                    <tbody class="divide-y divide-murky-700">
+                                        <template x-for="c in categories" :key="c.id">
+                                            <tr>
+                                                <td class="px-5 py-3 text-xs font-semibold" x-text="c.name"></td>
+                                                <td class="px-5 py-3 text-xs" x-text="c.owner || '-'"></td>
+                                                <td class="px-5 py-3 text-xs" x-text="c.type"></td>
+                                                <td class="px-5 py-3"><span class="px-2 py-0.5 rounded text-xs font-semibold" :class="c.popular === '1' ? 'bg-yellow-500/20 text-yellow-300' : 'bg-gray-500/20 text-gray-300'" x-text="c.popular === '1' ? 'Ya' : 'Tidak'"></span></td>
+                                                <td class="px-5 py-3">
+                                                    <div class="flex gap-1">
+                                                        <button @click="openModal('cat_edit', c)" class="text-xs px-2 py-1 rounded bg-blue-500/20 text-blue-300 hover:bg-blue-500/30">Edit</button>
+                                                        <button @click="deleteCategory(c)" class="text-xs px-2 py-1 rounded bg-red-500/20 text-red-300 hover:bg-red-500/30">Hapus</button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </template>
+                                        <template x-if="categories.length === 0"><tr><td colspan="5" class="px-5 py-8 text-center text-murky-400">Belum ada kategori</td></tr></template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </template>
+
+                        <!-- Services -->
+                        <template x-if="tab === 'services'">
+                            <div class="rounded-xl bg-murky-800 overflow-hidden">
+                                <div class="p-5 border-b border-murky-700 flex justify-between items-center">
+                                    <span class="font-semibold">Daftar Layanan</span>
+                                    <button @click="openModal('svc_add')" class="rounded-md bg-primary-500 px-3 py-1.5 text-xs font-medium hover:bg-primary-400">+ Tambah Layanan</button>
+                                </div>
+                                <table class="w-full text-sm">
+                                    <thead class="bg-murky-700/50 text-xs text-murky-300">
+                                        <tr>
+                                            <th class="text-left px-5 py-3">Kode</th>
+                                            <th class="text-left px-5 py-3">Nama</th>
+                                            <th class="text-left px-5 py-3">Game</th>
+                                            <th class="text-right px-5 py-3">Harga</th>
+                                            <th class="text-right px-5 py-3">Member</th>
+                                            <th class="text-right px-5 py-3">Reseller</th>
+                                            <th class="text-left px-5 py-3">Provider</th>
+                                            <th class="text-left px-5 py-3">Status</th>
+                                            <th class="text-left px-5 py-3">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-murky-700">
+                                        <template x-for="s in services" :key="s.id">
+                                            <tr>
+                                                <td class="px-5 py-3 text-xs font-mono" x-text="s.code"></td>
+                                                <td class="px-5 py-3 text-xs" x-text="s.name"></td>
+                                                <td class="px-5 py-3 text-xs" x-text="s.game"></td>
+                                                <td class="px-5 py-3 text-right text-xs" x-text="'Rp ' + fmt(s.price)"></td>
+                                                <td class="px-5 py-3 text-right text-xs" x-text="'Rp ' + fmt(s.member)"></td>
+                                                <td class="px-5 py-3 text-right text-xs" x-text="'Rp ' + fmt(s.reseller)"></td>
+                                                <td class="px-5 py-3 text-xs" x-text="s.provider"></td>
+                                                <td class="px-5 py-3"><span class="px-2 py-0.5 rounded text-xs font-semibold" :class="s.status === 'available' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'" x-text="s.status"></span></td>
+                                                <td class="px-5 py-3">
+                                                    <div class="flex gap-1">
+                                                        <button @click="openModal('svc_edit', s)" class="text-xs px-2 py-1 rounded bg-blue-500/20 text-blue-300 hover:bg-blue-500/30">Edit</button>
+                                                        <button @click="deleteItem('/api/admin/service/delete', s.id, loadServices)" class="text-xs px-2 py-1 rounded bg-red-500/20 text-red-300 hover:bg-red-500/30">Hapus</button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </template>
+                                        <template x-if="services.length === 0"><tr><td colspan="9" class="px-5 py-8 text-center text-murky-400">Tidak ada layanan</td></tr></template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </template>
+
+                        <!-- Provider -->
+                        <template x-if="tab === 'provider'">
+                            <div class="rounded-xl bg-murky-800 overflow-hidden">
+                                <div class="p-5 border-b border-murky-700 font-semibold">Provider & Gateway</div>
+                                <table class="w-full text-sm">
+                                    <thead class="bg-murky-700/50 text-xs text-murky-300"><tr><th class="text-left px-5 py-3">Kode</th><th class="text-left px-5 py-3">Nama</th><th class="text-left px-5 py-3">Userid/Merchant</th><th class="text-left px-5 py-3">Mode</th><th class="text-left px-5 py-3">Aksi</th></tr></thead>
+                                    <tbody class="divide-y divide-murky-700">
+                                        <template x-for="p in providers" :key="p.code">
+                                            <tr>
+                                                <td class="px-5 py-3 text-xs font-mono font-semibold" x-text="p.code"></td>
+                                                <td class="px-5 py-3 text-xs" x-text="p.name || '-'"></td>
+                                                <td class="px-5 py-3 text-xs" x-text="p.userid || p.merchant || '-'"></td>
+                                                <td class="px-5 py-3 text-xs" x-text="p.mode || '-'"></td>
+                                                <td class="px-5 py-3"><button @click="openModal('prov_edit', p)" class="text-xs px-2 py-1 rounded bg-blue-500/20 text-blue-300 hover:bg-blue-500/30">Edit</button></td>
+                                            </tr>
+                                        </template>
+                                        <template x-if="providers.length === 0"><tr><td colspan="5" class="px-5 py-8 text-center text-murky-400">Belum ada provider</td></tr></template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </template>
+
+                        <!-- Transactions Manage -->
+                        <template x-if="tab === 'transactions_manage'">
+                            <div class="rounded-xl bg-murky-800 overflow-hidden">
+                                <div class="p-5 border-b border-murky-700 font-semibold">Daftar Transaksi</div>
+                                <div class="overflow-x-auto">
+                                <table class="w-full text-sm">
+                                    <thead class="bg-murky-700/50 text-xs text-murky-300">
+                                        <tr>
+                                            <th class="text-left px-5 py-3">Invoice</th>
+                                            <th class="text-left px-5 py-3">User</th>
+                                            <th class="text-left px-5 py-3">Layanan</th>
+                                            <th class="text-right px-5 py-3">Harga</th>
+                                            <th class="text-left px-5 py-3">Status Order</th>
+                                            <th class="text-left px-5 py-3">Status Bayar</th>
+                                            <th class="text-left px-5 py-3">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-murky-700">
+                                        <template x-for="t in transactions" :key="t.order_id">
+                                            <tr>
+                                                <td class="px-5 py-3 text-xs font-mono text-orange-400" x-text="t.order_id"></td>
+                                                <td class="px-5 py-3 text-xs" x-text="t.user"></td>
+                                                <td class="px-5 py-3 text-xs" x-text="t.service_name"></td>
+                                                <td class="px-5 py-3 text-right text-xs font-semibold" x-text="'Rp ' + fmt(t.price)"></td>
+                                                <td class="px-5 py-3">
+                                                    <select class="form-input !py-1 !text-xs" :value="t.status" @change="updateTrxStatus(t.order_id, $event.target.value)">
+                                                        <option value="pending">pending</option>
+                                                        <option value="process">process</option>
+                                                        <option value="success">success</option>
+                                                        <option value="error">error</option>
+                                                        <option value="system">system</option>
+                                                    </select>
+                                                </td>
+                                                <td class="px-5 py-3">
+                                                    <select class="form-input !py-1 !text-xs" :value="t.status_payment" @change="updateTrxPayment(t.order_id, $event.target.value)">
+                                                        <option value="unpaid">unpaid</option>
+                                                        <option value="paid">paid</option>
+                                                        <option value="cancel">cancel</option>
+                                                        <option value="refund">refund</option>
+                                                    </select>
+                                                </td>
+                                                <td class="px-5 py-3"><button @click="showTrxDetail(t.order_id)" class="text-xs px-2 py-1 rounded bg-blue-500/20 text-blue-300 hover:bg-blue-500/30">Detail</button></td>
+                                            </tr>
+                                        </template>
+                                        <template x-if="transactions.length === 0"><tr><td colspan="7" class="px-5 py-8 text-center text-murky-400">Tidak ada transaksi</td></tr></template>
+                                    </tbody>
+                                </table>
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- Manual Orders -->
+                        <template x-if="tab === 'manual_orders'">
+                            <div class="rounded-xl bg-murky-800 overflow-hidden">
+                                <div class="p-5 border-b border-murky-700 font-semibold">Order Manual (Provider X)</div>
+                                <table class="w-full text-sm">
+                                    <thead class="bg-murky-700/50 text-xs text-murky-300">
+                                        <tr><th class="text-left px-5 py-3">Invoice</th><th class="text-left px-5 py-3">User</th><th class="text-left px-5 py-3">Layanan</th><th class="text-right px-5 py-3">Harga</th><th class="text-left px-5 py-3">Status</th><th class="text-left px-5 py-3">Aksi</th></tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-murky-700">
+                                        <template x-for="t in manualOrders" :key="t.order_id">
+                                            <tr>
+                                                <td class="px-5 py-3 text-xs font-mono text-orange-400" x-text="t.order_id"></td>
+                                                <td class="px-5 py-3 text-xs" x-text="t.user"></td>
+                                                <td class="px-5 py-3 text-xs" x-text="t.service_name"></td>
+                                                <td class="px-5 py-3 text-right text-xs" x-text="'Rp ' + fmt(t.price)"></td>
+                                                <td class="px-5 py-3"><span class="px-2 py-0.5 rounded text-xs font-semibold" :class="statusClass(t.status)" x-text="t.status"></span></td>
+                                                <td class="px-5 py-3"><button @click="resendManual(t.order_id)" class="text-xs px-2 py-1 rounded bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30">Resend WA</button></td>
+                                            </tr>
+                                        </template>
+                                        <template x-if="manualOrders.length === 0"><tr><td colspan="6" class="px-5 py-8 text-center text-murky-400">Tidak ada order manual</td></tr></template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </template>
+
+                        <!-- Transaction Report -->
+                        <template x-if="tab === 'transactions_report'">
+                            <div class="space-y-6">
+                                <div class="rounded-xl bg-murky-800 p-6">
+                                    <h2 class="text-xl font-bold mb-4">Laporan Penjualan</h2>
+                                    <div class="flex gap-3 items-end mb-4 flex-wrap">
+                                        <div><label class="form-label">Dari</label><input type="date" class="form-input" x-model="range.from" @change="loadSalesReport"></div>
+                                        <div><label class="form-label">Sampai</label><input type="date" class="form-input" x-model="range.to" @change="loadSalesReport"></div>
+                                    </div>
+                                    <table class="w-full text-sm">
+                                        <thead class="bg-murky-700/50 text-xs text-murky-300"><tr><th class="text-left px-5 py-3">Tanggal</th><th class="text-right px-5 py-3">Transaksi</th><th class="text-right px-5 py-3">Omzet</th><th class="text-right px-5 py-3">Profit</th></tr></thead>
+                                        <tbody class="divide-y divide-murky-700">
+                                            <template x-for="(r, i) in salesReport" :key="i">
+                                                <tr>
+                                                    <td class="px-5 py-3 text-xs" x-text="r.date"></td>
+                                                    <td class="px-5 py-3 text-right text-xs" x-text="r.trx"></td>
+                                                    <td class="px-5 py-3 text-right text-xs text-green-400" x-text="'Rp ' + fmt(r.income)"></td>
+                                                    <td class="px-5 py-3 text-right text-xs text-emerald-300" x-text="'Rp ' + fmt(r.profit)"></td>
+                                                </tr>
+                                            </template>
+                                            <template x-if="salesReport.length === 0"><tr><td colspan="4" class="px-5 py-8 text-center text-murky-400">Tidak ada data pada rentang ini</td></tr></template>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="rounded-xl bg-murky-800 overflow-hidden">
+                                    <div class="p-5 border-b border-murky-700 font-semibold">Profit per Provider</div>
+                                    <table class="w-full text-sm">
+                                        <thead class="bg-murky-700/50 text-xs text-murky-300"><tr><th class="text-left px-5 py-3">Provider</th><th class="text-right px-5 py-3">Transaksi</th><th class="text-right px-5 py-3">Gross</th><th class="text-right px-5 py-3">Profit</th></tr></thead>
+                                        <tbody class="divide-y divide-murky-700">
+                                            <template x-for="(r, i) in profitReport" :key="i">
+                                                <tr>
+                                                    <td class="px-5 py-3 text-xs font-semibold" x-text="r.provider"></td>
+                                                    <td class="px-5 py-3 text-right text-xs" x-text="r.trx"></td>
+                                                    <td class="px-5 py-3 text-right text-xs" x-text="'Rp ' + fmt(r.gross)"></td>
+                                                    <td class="px-5 py-3 text-right text-xs text-emerald-300" x-text="'Rp ' + fmt(r.profit)"></td>
+                                                </tr>
+                                            </template>
+                                            <template x-if="profitReport.length === 0"><tr><td colspan="4" class="px-5 py-8 text-center text-murky-400">Tidak ada data</td></tr></template>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- Voucher -->
+                        <template x-if="tab === 'transactions_voucher'">
+                            <div class="rounded-xl bg-murky-800 overflow-hidden">
+                                <div class="p-5 border-b border-murky-700 flex justify-between items-center">
+                                    <span class="font-semibold">Voucher Promo</span>
+                                    <button @click="openModal('voucher_add')" class="rounded-md bg-primary-500 px-3 py-1.5 text-xs font-medium hover:bg-primary-400">+ Voucher Baru</button>
+                                </div>
+                                <table class="w-full text-sm">
+                                    <thead class="bg-murky-700/50 text-xs text-murky-300"><tr><th class="text-left px-5 py-3">Kode</th><th class="text-left px-5 py-3">Kategori</th><th class="text-right px-5 py-3">Diskon</th><th class="text-right px-5 py-3">Minimum</th><th class="text-right px-5 py-3">Stok</th><th class="text-left px-5 py-3">Aksi</th></tr></thead>
+                                    <tbody class="divide-y divide-murky-700">
+                                        <template x-for="v in vouchers" :key="v.id">
+                                            <tr>
+                                                <td class="px-5 py-3 text-xs font-mono font-semibold text-orange-400" x-text="v.code"></td>
+                                                <td class="px-5 py-3 text-xs" x-text="v.category || 'Semua'"></td>
+                                                <td class="px-5 py-3 text-right text-xs text-green-400" x-text="'Rp ' + fmt(v.discount)"></td>
+                                                <td class="px-5 py-3 text-right text-xs" x-text="'Rp ' + fmt(v.minimum)"></td>
+                                                <td class="px-5 py-3 text-right text-xs" x-text="v.stock"></td>
+                                                <td class="px-5 py-3"><button @click="deleteItem('/api/admin/voucher/delete', v.id, loadVouchers)" class="text-xs px-2 py-1 rounded bg-red-500/20 text-red-300 hover:bg-red-500/30">Hapus</button></td>
+                                            </tr>
+                                        </template>
+                                        <template x-if="vouchers.length === 0"><tr><td colspan="6" class="px-5 py-8 text-center text-murky-400">Belum ada voucher</td></tr></template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </template>
+
+                        <!-- Flashsale -->
+                        <template x-if="tab === 'transactions_flashsale'">
+                            <div class="rounded-xl bg-murky-800 overflow-hidden">
+                                <div class="p-5 border-b border-murky-700 flex justify-between items-center">
+                                    <span class="font-semibold">Flashsale</span>
+                                    <button @click="openModal('flash_add')" class="rounded-md bg-primary-500 px-3 py-1.5 text-xs font-medium hover:bg-primary-400">+ Item Flashsale</button>
+                                </div>
+                                <table class="w-full text-sm">
+                                    <thead class="bg-murky-700/50 text-xs text-murky-300"><tr><th class="text-left px-5 py-3">Kode Layanan</th><th class="text-left px-5 py-3">Nama</th><th class="text-right px-5 py-3">Diskon</th><th class="text-left px-5 py-3">Status</th><th class="text-left px-5 py-3">Aksi</th></tr></thead>
+                                    <tbody class="divide-y divide-murky-700">
+                                        <template x-for="f in flashsales" :key="f.id">
+                                            <tr>
+                                                <td class="px-5 py-3 text-xs font-mono" x-text="f.code"></td>
+                                                <td class="px-5 py-3 text-xs" x-text="f.service_name || '-'"></td>
+                                                <td class="px-5 py-3 text-right text-xs text-green-400" x-text="'Rp ' + fmt(f.amount)"></td>
+                                                <td class="px-5 py-3"><span class="px-2 py-0.5 rounded text-xs font-semibold" :class="f.status === '1' ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-300'" x-text="f.status === '1' ? 'Aktif' : 'Nonaktif'"></span></td>
+                                                <td class="px-5 py-3">
+                                                    <div class="flex gap-1">
+                                                        <button @click="toggleFlash(f.id)" class="text-xs px-2 py-1 rounded bg-yellow-500/20 text-yellow-300 hover:bg-yellow-500/30" x-text="f.status === '1' ? 'Matikan' : 'Aktifkan'"></button>
+                                                        <button @click="deleteItem('/api/admin/flashsale/delete', f.id, loadFlashsales)" class="text-xs px-2 py-1 rounded bg-red-500/20 text-red-300 hover:bg-red-500/30">Hapus</button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </template>
+                                        <template x-if="flashsales.length === 0"><tr><td colspan="5" class="px-5 py-8 text-center text-murky-400">Belum ada flashsale</td></tr></template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </template>
+
+                        <!-- Financial Sales -->
+                        <template x-if="tab === 'financial_sales'">
+                            <div class="rounded-xl bg-murky-800 p-6">
+                                <h2 class="text-xl font-bold mb-4">Penjualan</h2>
+                                <div class="flex gap-3 items-end mb-4 flex-wrap">
+                                    <div><label class="form-label">Dari</label><input type="date" class="form-input" x-model="range.from" @change="loadSalesReport"></div>
+                                    <div><label class="form-label">Sampai</label><input type="date" class="form-input" x-model="range.to" @change="loadSalesReport"></div>
+                                </div>
+                                <table class="w-full text-sm">
+                                    <thead class="bg-murky-700/50 text-xs text-murky-300"><tr><th class="text-left px-5 py-3">Tanggal</th><th class="text-right px-5 py-3">Transaksi</th><th class="text-right px-5 py-3">Omzet</th></tr></thead>
+                                    <tbody class="divide-y divide-murky-700">
+                                        <template x-for="(r, i) in salesReport" :key="i">
+                                            <tr>
+                                                <td class="px-5 py-3 text-xs" x-text="r.date"></td>
+                                                <td class="px-5 py-3 text-right text-xs" x-text="r.trx"></td>
+                                                <td class="px-5 py-3 text-right text-xs text-green-400" x-text="'Rp ' + fmt(r.income)"></td>
+                                            </tr>
+                                        </template>
+                                        <template x-if="salesReport.length === 0"><tr><td colspan="3" class="px-5 py-8 text-center text-murky-400">Tidak ada data</td></tr></template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </template>
+
+                        <!-- Financial Profit -->
+                        <template x-if="tab === 'financial_profit'">
+                            <div class="rounded-xl bg-murky-800 p-6">
+                                <h2 class="text-xl font-bold mb-4">Profit per Provider</h2>
+                                <div class="flex gap-3 items-end mb-4 flex-wrap">
+                                    <div><label class="form-label">Dari</label><input type="date" class="form-input" x-model="range.from" @change="loadProfitReport"></div>
+                                    <div><label class="form-label">Sampai</label><input type="date" class="form-input" x-model="range.to" @change="loadProfitReport"></div>
+                                </div>
+                                <table class="w-full text-sm">
+                                    <thead class="bg-murky-700/50 text-xs text-murky-300"><tr><th class="text-left px-5 py-3">Provider</th><th class="text-right px-5 py-3">Transaksi</th><th class="text-right px-5 py-3">Gross</th><th class="text-right px-5 py-3">Profit</th></tr></thead>
+                                    <tbody class="divide-y divide-murky-700">
+                                        <template x-for="(r, i) in profitReport" :key="i">
+                                            <tr>
+                                                <td class="px-5 py-3 text-xs font-semibold" x-text="r.provider"></td>
+                                                <td class="px-5 py-3 text-right text-xs" x-text="r.trx"></td>
+                                                <td class="px-5 py-3 text-right text-xs" x-text="'Rp ' + fmt(r.gross)"></td>
+                                                <td class="px-5 py-3 text-right text-xs text-emerald-300" x-text="'Rp ' + fmt(r.profit)"></td>
+                                            </tr>
+                                        </template>
+                                        <template x-if="profitReport.length === 0"><tr><td colspan="4" class="px-5 py-8 text-center text-murky-400">Tidak ada data</td></tr></template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </template>
+
+                        <!-- Financial Summary -->
+                        <template x-if="tab === 'financial_summary'">
+                            <div class="space-y-6">
+                                <div class="rounded-xl bg-murky-800 p-6">
+                                    <h2 class="text-xl font-bold mb-4">Ringkasan per Status</h2>
+                                    <div class="flex gap-3 items-end mb-4 flex-wrap">
+                                        <div><label class="form-label">Dari</label><input type="date" class="form-input" x-model="range.from" @change="loadSummaryReport"></div>
+                                        <div><label class="form-label">Sampai</label><input type="date" class="form-input" x-model="range.to" @change="loadSummaryReport"></div>
+                                    </div>
+                                    <table class="w-full text-sm">
+                                        <thead class="bg-murky-700/50 text-xs text-murky-300"><tr><th class="text-left px-5 py-3">Status</th><th class="text-right px-5 py-3">Transaksi</th><th class="text-right px-5 py-3">Total</th></tr></thead>
+                                        <tbody class="divide-y divide-murky-700">
+                                            <template x-for="(r, i) in summaryByStatus" :key="i">
+                                                <tr>
+                                                    <td class="px-5 py-3"><span class="px-2 py-0.5 rounded text-xs font-semibold capitalize" :class="statusClass(r.status)" x-text="r.status"></span></td>
+                                                    <td class="px-5 py-3 text-right text-xs" x-text="r.trx"></td>
+                                                    <td class="px-5 py-3 text-right text-xs" x-text="'Rp ' + fmt(r.total)"></td>
+                                                </tr>
+                                            </template>
+                                            <template x-if="summaryByStatus.length === 0"><tr><td colspan="3" class="px-5 py-8 text-center text-murky-400">Tidak ada data</td></tr></template>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="rounded-xl bg-murky-800 overflow-hidden">
+                                    <div class="p-5 border-b border-murky-700 font-semibold">Top 10 Pembeli</div>
+                                    <table class="w-full text-sm">
+                                        <thead class="bg-murky-700/50 text-xs text-murky-300"><tr><th class="text-left px-5 py-3">User</th><th class="text-right px-5 py-3">Transaksi</th><th class="text-right px-5 py-3">Total Belanja</th></tr></thead>
+                                        <tbody class="divide-y divide-murky-700">
+                                            <template x-for="(r, i) in summaryByUser" :key="i">
+                                                <tr>
+                                                    <td class="px-5 py-3 text-xs font-semibold" x-text="r.user"></td>
+                                                    <td class="px-5 py-3 text-right text-xs" x-text="r.trx"></td>
+                                                    <td class="px-5 py-3 text-right text-xs text-green-400" x-text="'Rp ' + fmt(r.total)"></td>
+                                                </tr>
+                                            </template>
+                                            <template x-if="summaryByUser.length === 0"><tr><td colspan="3" class="px-5 py-8 text-center text-murky-400">Tidak ada data</td></tr></template>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- Deposit Manage -->
+                        <template x-if="tab === 'deposit_manage'">
+                            <div class="rounded-xl bg-murky-800 overflow-hidden">
+                                <div class="p-5 border-b border-murky-700 font-semibold">Permintaan Deposit</div>
+                                <div class="overflow-x-auto">
+                                <table class="w-full text-sm">
+                                    <thead class="bg-murky-700/50 text-xs text-murky-300">
+                                        <tr><th class="text-left px-5 py-3">ID Deposit</th><th class="text-left px-5 py-3">User</th><th class="text-left px-5 py-3">Metode</th><th class="text-right px-5 py-3">Jumlah</th><th class="text-left px-5 py-3">Tanggal</th><th class="text-left px-5 py-3">Status</th></tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-murky-700">
+                                        <template x-for="d in deposits" :key="d.id">
+                                            <tr>
+                                                <td class="px-5 py-3 text-xs font-mono text-orange-400" x-text="d.deposit_id"></td>
+                                                <td class="px-5 py-3 text-xs" x-text="d.username"></td>
+                                                <td class="px-5 py-3 text-xs" x-text="d.name || d.method"></td>
+                                                <td class="px-5 py-3 text-right text-xs font-semibold" x-text="'Rp ' + fmt(d.amount)"></td>
+                                                <td class="px-5 py-3 text-xs" x-text="d.date"></td>
+                                                <td class="px-5 py-3">
+                                                    <select class="form-input !py-1 !text-xs" :value="d.status" @change="updateDepositStatus(d.deposit_id, $event.target.value)">
+                                                        <option value="unpaid">unpaid</option>
+                                                        <option value="paid">paid</option>
+                                                        <option value="cancel">cancel</option>
+                                                        <option value="refund">refund</option>
+                                                    </select>
+                                                </td>
+                                            </tr>
+                                        </template>
+                                        <template x-if="deposits.length === 0"><tr><td colspan="6" class="px-5 py-8 text-center text-murky-400">Belum ada deposit</td></tr></template>
+                                    </tbody>
+                                </table>
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- Deposit Report -->
+                        <template x-if="tab === 'deposit_report'">
+                            <div class="rounded-xl bg-murky-800 p-6">
+                                <h2 class="text-xl font-bold mb-4">Rekap Deposit per Metode</h2>
+                                <table class="w-full text-sm">
+                                    <thead class="bg-murky-700/50 text-xs text-murky-300"><tr><th class="text-left px-5 py-3">Metode</th><th class="text-right px-5 py-3">Request</th><th class="text-right px-5 py-3">Total (Paid)</th></tr></thead>
+                                    <tbody class="divide-y divide-murky-700">
+                                        <template x-for="(r, i) in depositReport" :key="i">
+                                            <tr>
+                                                <td class="px-5 py-3 text-xs font-semibold" x-text="r.method"></td>
+                                                <td class="px-5 py-3 text-right text-xs" x-text="r.count"></td>
+                                                <td class="px-5 py-3 text-right text-xs text-green-400" x-text="'Rp ' + fmt(r.paid_total)"></td>
+                                            </tr>
+                                        </template>
+                                        <template x-if="depositReport.length === 0"><tr><td colspan="3" class="px-5 py-8 text-center text-murky-400">Tidak ada data</td></tr></template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </template>
+
+                        <!-- Deposit Method -->
+                        <template x-if="tab === 'deposit_method'">
+                            <div class="rounded-xl bg-murky-800 overflow-hidden">
+                                <div class="p-5 border-b border-murky-700 font-semibold">Metode Pembayaran Aktif (tabel metode)</div>
+                                <table class="w-full text-sm">
+                                    <thead class="bg-murky-700/50 text-xs text-murky-300"><tr><th class="text-left px-5 py-3">Kode</th><th class="text-left px-5 py-3">Nama</th><th class="text-left px-5 py-3">Tipe</th><th class="text-left px-5 py-3">Provider</th><th class="text-right px-5 py-3">Min</th><th class="text-right px-5 py-3">Max</th><th class="text-left px-5 py-3">Fee</th></tr></thead>
+                                    <tbody class="divide-y divide-murky-700">
+                                        <template x-for="m in paymentMethods" :key="m.code">
+                                            <tr>
+                                                <td class="px-5 py-3 text-xs font-mono" x-text="m.code"></td>
+                                                <td class="px-5 py-3 text-xs" x-text="m.name"></td>
+                                                <td class="px-5 py-3 text-xs capitalize" x-text="m.type"></td>
+                                                <td class="px-5 py-3 text-xs" x-text="m.provider"></td>
+                                                <td class="px-5 py-3 text-right text-xs" x-text="'Rp ' + fmt(m.min)"></td>
+                                                <td class="px-5 py-3 text-right text-xs" x-text="'Rp ' + fmt(m.max)"></td>
+                                                <td class="px-5 py-3 text-xs" x-text="Number(m.percent) > 0 ? m.percent + '%' : '+Rp ' + fmt(m.flat)"></td>
+                                            </tr>
+                                        </template>
+                                        <template x-if="paymentMethods.length === 0"><tr><td colspan="7" class="px-5 py-8 text-center text-murky-400">Belum ada metode aktif</td></tr></template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </template>
+
+                        <!-- Server Cronsjob -->
+                        <template x-if="tab === 'server_cronsjob'">
+                            <div class="rounded-xl bg-murky-800 p-6">
+                                <h2 class="text-xl font-bold mb-4">Worker Internal (fulfillment_service)</h2>
+                                <p class="text-sm text-murky-300 mb-4">Pada arsitektur Rust, pekerjaan berkala berjalan otomatis di dalam proses <code class="text-primary-400">fulfillment_service</code> — tidak butuh cron eksternal:</p>
+                                <div class="grid sm:grid-cols-2 gap-4 text-sm">
+                                    <div class="rounded-lg bg-murky-700 p-4"><div class="font-semibold mb-1">Status Poller</div><div class="text-xs text-murky-300">Cek status order DIGI tiap 30 detik, update SN & refund saldo.</div></div>
+                                    <div class="rounded-lg bg-murky-700 p-4"><div class="font-semibold mb-1">Expired Cleaner</div><div class="text-xs text-murky-300">Expire order & deposit belum bayar tiap 60 detik.</div></div>
+                                    <div class="rounded-lg bg-murky-700 p-4"><div class="font-semibold mb-1">Tokopay Worker</div><div class="text-xs text-murky-300">Rekonsiliasi invoice Tokopay tiap 60 detik.</div></div>
+                                    <div class="rounded-lg bg-murky-700 p-4"><div class="font-semibold mb-1">GoPay Bot + Report Bot</div><div class="text-xs text-murky-300">Dua listener Telegram: matching pembayaran QRIS/GoPay & antrean perintah terenkripsi.</div></div>
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- Server Error Log -->
+                        <template x-if="tab === 'server_errorlog'">
+                            <div class="rounded-xl bg-murky-800 overflow-hidden">
+                                <div class="p-5 border-b border-murky-700 flex justify-between items-center">
+                                    <span class="font-semibold">Log Sistem</span>
+                                    <button @click="loadErrorLogs" class="text-xs text-primary-400 hover:underline">Refresh</button>
+                                </div>
+                                <table class="w-full text-sm">
+                                    <thead class="bg-murky-700/50 text-xs text-murky-300"><tr><th class="text-left px-5 py-3">Tanggal</th><th class="text-left px-5 py-3">Tipe</th><th class="text-left px-5 py-3">Pesan</th></tr></thead>
+                                    <tbody class="divide-y divide-murky-700">
+                                        <template x-for="(l, i) in errorLogs" :key="i">
+                                            <tr>
+                                                <td class="px-5 py-3 text-xs whitespace-nowrap" x-text="l.date"></td>
+                                                <td class="px-5 py-3 text-xs" x-text="l.type"></td>
+                                                <td class="px-5 py-3 text-xs break-all" x-text="l.text"></td>
+                                            </tr>
+                                        </template>
+                                        <template x-if="errorLogs.length === 0"><tr><td colspan="3" class="px-5 py-8 text-center text-murky-400">Log kosong / tabel logs belum tersedia</td></tr></template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </template>
+
+                        <!-- Get Layanan DIGIFLAZZ -->
+                        <template x-if="tab === 'get_digiflazz'">
+                            <div class="rounded-xl bg-murky-800 p-6">
+                                <h2 class="text-xl font-bold mb-2">Sinkronisasi DIGIFLAZZ</h2>
+                                <p class="text-sm text-murky-300">Katalog layanan DigiFlazz disinkronkan otomatis oleh <code class="text-primary-400">fulfillment_service</code> lewat koneksi Telegram terenkripsi ke server web. Pastikan env <code class="text-primary-400">DIGIFLAZZ_USERNAME</code> dan <code class="text-primary-400">DIGIFLAZZ_APIKEY</code> terisi, lalu restart worker untuk menarik price list terbaru.</p>
+                            </div>
+                        </template>
+                        <template x-if="tab === 'get_vipayment'">
+                            <div class="rounded-xl bg-murky-800 p-6">
+                                <h2 class="text-xl font-bold mb-2">VIPAYMENT</h2>
+                                <p class="text-sm text-murky-300">Integrasi VIPayment belum terpasang pada backend Rust. Kredensial bisa disiapkan di menu Provider agar siap ketika modul tersedia.</p>
+                            </div>
+                        </template>
+                        <template x-if="tab === 'get_keypedia'">
+                            <div class="rounded-xl bg-murky-800 p-6">
+                                <h2 class="text-xl font-bold mb-2">KEYPEDIA</h2>
+                                <p class="text-sm text-murky-300">Integrasi KEYPEDIA belum terpasang pada backend Rust. Kredensial bisa disiapkan di menu Provider agar siap ketika modul tersedia.</p>
+                            </div>
+                        </template>
                     </div>
+                </div>
+            </div>
+
+            <!-- ============ GENERIC MODAL ============ -->
+            <div x-show="modal.open" x-cloak class="modal-backdrop" @click.self="modal.open = false">
+                <div class="w-full max-w-lg rounded-xl bg-murky-800 border border-murky-600 p-6 max-h-[90vh] overflow-y-auto">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-bold text-lg" x-text="modalTitle"></h3>
+                        <button @click="modal.open = false" class="text-murky-400 hover:text-white"><i class="bi bi-x-lg"></i></button>
+                    </div>
+
+                    <!-- user add/edit -->
+                    <template x-if="['user_add','user_edit'].includes(modal.type)">
+                        <form @submit.prevent="submitUserForm" class="space-y-3">
+                            <div x-show="modal.type === 'user_add'"><label class="form-label">Username *</label><input type="text" required class="form-input" x-model="userForm.username"></div>
+                            <div><label class="form-label">Nama</label><input type="text" class="form-input" x-model="userForm.name"></div>
+                            <div><label class="form-label">Email</label><input type="email" class="form-input" x-model="userForm.email"></div>
+                            <div><label class="form-label">No. WhatsApp</label><input type="text" class="form-input" x-model="userForm.phone"></div>
+                            <div x-show="modal.type === 'user_add'"><label class="form-label">Level</label>
+                                <select class="form-input" x-model="userForm.level"><option>Member</option><option>Reseller</option><option>Admin</option></select>
+                            </div>
+                            <div x-show="modal.type === 'user_edit'"><label class="form-label">Level</label>
+                                <select class="form-input" x-model="userForm.level"><option>Member</option><option>Reseller</option><option>Admin</option></select>
+                            </div>
+                            <div x-show="modal.type === 'user_edit'"><label class="form-label">Status</label>
+                                <select class="form-input" x-model="userForm.status"><option value="active">active</option><option value="suspend">suspend</option></select>
+                            </div>
+                            <div><label class="form-label" x-text="modal.type === 'user_add' ? 'Password *' : 'Password Baru (kosongkan jika tetap)'"></label><input type="password" :required="modal.type === 'user_add'" class="form-input" x-model="userForm.password"></div>
+                            <button type="submit" class="w-full rounded-md bg-primary-500 py-2 text-sm font-medium hover:bg-primary-400">Simpan</button>
+                        </form>
+                    </template>
+
+                    <!-- user balance -->
+                    <template x-if="modal.type === 'user_balance'">
+                        <form @submit.prevent="submitBalanceForm" class="space-y-3">
+                            <p class="text-sm text-murky-300">Sesuaikan saldo untuk <span class="font-semibold text-white" x-text="modal.data?.username"></span> (saldo saat ini: Rp <span x-text="fmt(modal.data?.balance)"></span>).</p>
+                            <div><label class="form-label">Jumlah (negatif untuk potong)</label><input type="number" step="any" required class="form-input" x-model="balanceForm.amount"></div>
+                            <div><label class="form-label">Alasan / Catatan</label><input type="text" class="form-input" x-model="balanceForm.note" placeholder="Bonus / Koreksi / dll"></div>
+                            <button type="submit" class="w-full rounded-md bg-primary-500 py-2 text-sm font-medium hover:bg-primary-400">Simpan</button>
+                        </form>
+                    </template>
+
+                    <!-- user lock -->
+                    <template x-if="modal.type === 'user_lock'">
+                        <form @submit.prevent="submitLockForm" class="space-y-3">
+                            <p class="text-sm text-murky-300">Kunci akun <span class="font-semibold text-white" x-text="modal.data?.username"></span>?</p>
+                            <div><label class="form-label">Alasan</label><input type="text" required class="form-input" x-model="lockForm.reason"></div>
+                            <button type="submit" class="w-full rounded-md bg-red-500 py-2 text-sm font-medium hover:bg-red-400">Kunci Akun</button>
+                        </form>
+                    </template>
+
+                    <!-- service add/edit -->
+                    <template x-if="['svc_add','svc_edit'].includes(modal.type)">
+                        <form @submit.prevent="submitServiceForm" class="space-y-3">
+                            <div><label class="form-label">Kode Layanan *</label><input type="text" :disabled="modal.type === 'svc_edit'" required class="form-input disabled:opacity-50" x-model="svcForm.code"></div>
+                            <div><label class="form-label">Nama *</label><input type="text" required class="form-input" x-model="svcForm.name"></div>
+                            <div><label class="form-label">Game / Kategori *</label><input type="text" required class="form-input" x-model="svcForm.game" placeholder="Nama kategori persis seperti di Category"></div>
+                            <div><label class="form-label">Type</label><input type="text" class="form-input" x-model="svcForm.type_name" placeholder="games / pulsa / data"></div>
+                            <div class="grid grid-cols-3 gap-3">
+                                <div><label class="form-label">Harga Dasar *</label><input type="number" step="any" required class="form-input" x-model="svcForm.price"></div>
+                                <div><label class="form-label">Margin Member</label><input type="number" step="any" class="form-input" x-model="svcForm.member"></div>
+                                <div><label class="form-label">Margin Reseller</label><input type="number" step="any" class="form-input" x-model="svcForm.reseller"></div>
+                            </div>
+                            <div><label class="form-label">Provider</label>
+                                <select class="form-input" x-model="svcForm.provider"><option>DIGI</option><option>X</option></select>
+                            </div>
+                            <div x-show="modal.type === 'svc_edit'"><label class="form-label">Status</label>
+                                <select class="form-input" x-model="svcForm.status"><option value="available">available</option><option value="empty">empty</option></select>
+                            </div>
+                            <button type="submit" class="w-full rounded-md bg-primary-500 py-2 text-sm font-medium hover:bg-primary-400">Simpan</button>
+                        </form>
+                    </template>
+
+                    <!-- provider edit -->
+                    <template x-if="modal.type === 'prov_edit'">
+                        <form @submit.prevent="submitProviderForm" class="space-y-3">
+                            <p class="text-sm text-murky-300">Edit kredensial <span class="font-mono font-semibold text-white" x-text="modal.data?.code"></span></p>
+                            <div><label class="form-label">Userid / Merchant Code</label><input type="text" class="form-input" x-model="provForm.userid"></div>
+                            <div><label class="form-label">API Key / Secret</label><input type="text" class="form-input" x-model="provForm.apikey"></div>
+                            <div><label class="form-label">Merchant (opsional)</label><input type="text" class="form-input" x-model="provForm.merchant"></div>
+                            <div><label class="form-label">Link API (opsional)</label><input type="text" class="form-input" x-model="provForm.link"></div>
+                            <div><label class="form-label">Mode</label>
+                                <select class="form-input" x-model="provForm.mode"><option value=""></option><option value="production">production</option><option value="sandbox">sandbox</option></select>
+                            </div>
+                            <button type="submit" class="w-full rounded-md bg-primary-500 py-2 text-sm font-medium hover:bg-primary-400">Simpan</button>
+                        </form>
+                    </template>
+
+                    <!-- category edit -->
+                    <template x-if="modal.type === 'cat_edit'">
+                        <form @submit.prevent="submitCategoryForm" class="space-y-3">
+                            <div><label class="form-label">Nama Kategori *</label><input type="text" required class="form-input" x-model="catForm.name"></div>
+                            <div><label class="form-label">Owner / Publisher</label><input type="text" class="form-input" x-model="catForm.owner"></div>
+                            <div><label class="form-label">Type *</label><input type="text" required class="form-input" x-model="catForm.category_type" placeholder="games / pulsa-reguler / data"></div>
+                            <div><label class="form-label">Image JSON ({"image":"url","banner":"url"})</label><input type="text" class="form-input" x-model="catForm.image"></div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div><label class="form-label">Populer</label><select class="form-input" x-model="catForm.popular"><option value="0">Tidak</option><option value="1">Ya</option></select></div>
+                                <div><label class="form-label">APK Link</label><input type="text" class="form-input" x-model="catForm.apk"></div>
+                            </div>
+                            <div><label class="form-label">Target Note</label><input type="text" class="form-input" x-model="catForm.target_note"></div>
+                            <div><label class="form-label">Catatan Pembelian (HTML)</label><textarea class="form-input" rows="3" x-model="catForm.note"></textarea></div>
+                            <button type="submit" class="w-full rounded-md bg-primary-500 py-2 text-sm font-medium hover:bg-primary-400">Simpan</button>
+                        </form>
+                    </template>
+
+                    <!-- tab edit -->
+                    <template x-if="modal.type === 'tab_edit'">
+                        <form @submit.prevent="submitTabForm" class="space-y-3">
+                            <div><label class="form-label">Nama Tab *</label><input type="text" required class="form-input" x-model="tabForm.name"></div>
+                            <div><label class="form-label">Icon (emoji/kelas)</label><input type="text" class="form-input" x-model="tabForm.icon"></div>
+                            <div><label class="form-label">Type *</label><input type="text" required class="form-input" x-model="tabForm.tab_type" placeholder="harus sama dengan type kategori"></div>
+                            <div><label class="form-label">Urutan</label><input type="number" class="form-input" x-model="tabForm.order"></div>
+                            <button type="submit" class="w-full rounded-md bg-primary-500 py-2 text-sm font-medium hover:bg-primary-400">Simpan</button>
+                        </form>
+                    </template>
+
+                    <!-- blog edit -->
+                    <template x-if="modal.type === 'blog_edit'">
+                        <form @submit.prevent="submitBlogForm" class="space-y-3">
+                            <div><label class="form-label">Judul *</label><input type="text" required class="form-input" x-model="blogForm.title"></div>
+                            <div><label class="form-label">Banner URL</label><input type="text" class="form-input" x-model="blogForm.banner"></div>
+                            <div><label class="form-label">Konten (HTML)</label><textarea class="form-input font-mono" rows="8" x-model="blogForm.content"></textarea></div>
+                            <button type="submit" class="w-full rounded-md bg-primary-500 py-2 text-sm font-medium hover:bg-primary-400">Simpan</button>
+                        </form>
+                    </template>
+
+                    <!-- voucher add -->
+                    <template x-if="modal.type === 'voucher_add'">
+                        <form @submit.prevent="submitVoucherForm" class="space-y-3">
+                            <div><label class="form-label">Kode Voucher *</label><input type="text" required class="form-input uppercase" x-model="voucherForm.code"></div>
+                            <div><label class="form-label">Kategori (kosong = semua)</label><input type="text" class="form-input" x-model="voucherForm.category" placeholder="nama kategori persis"></div>
+                            <div class="grid grid-cols-3 gap-3">
+                                <div><label class="form-label">Diskon (Rp) *</label><input type="number" step="any" required class="form-input" x-model="voucherForm.discount"></div>
+                                <div><label class="form-label">Minimum (Rp)</label><input type="number" step="any" class="form-input" x-model="voucherForm.minimum"></div>
+                                <div><label class="form-label">Stok *</label><input type="number" required class="form-input" x-model="voucherForm.stock"></div>
+                            </div>
+                            <button type="submit" class="w-full rounded-md bg-primary-500 py-2 text-sm font-medium hover:bg-primary-400">Simpan</button>
+                        </form>
+                    </template>
+
+                    <!-- flashsale add -->
+                    <template x-if="modal.type === 'flash_add'">
+                        <form @submit.prevent="submitFlashForm" class="space-y-3">
+                            <div><label class="form-label">Kode Layanan *</label><input type="text" required class="form-input" x-model="flashForm.code" placeholder="kode service yang didiskon"></div>
+                            <div><label class="form-label">Diskon (Rp) *</label><input type="number" step="any" required class="form-input" x-model="flashForm.amount"></div>
+                            <button type="submit" class="w-full rounded-md bg-primary-500 py-2 text-sm font-medium hover:bg-primary-400">Simpan</button>
+                        </form>
+                    </template>
+
+                    <!-- transaction detail -->
+                    <template x-if="modal.type === 'trx_detail' && trxDetail">
+                        <div class="space-y-3 text-sm">
+                            <div class="grid grid-cols-2 gap-2">
+                                <template x-for="row in [
+                                    ['Invoice', trxDetail.order_id], ['Provider TID', trxDetail.order_tid],
+                                    ['User', trxDetail.user], ['Layanan', trxDetail.service_name],
+                                    ['Target', trxDetail.target], ['Nickname', trxDetail.nickname],
+                                    ['Harga', 'Rp ' + fmt(trxDetail.price)], ['Profit', 'Rp ' + fmt(trxDetail.profit)],
+                                    ['Status', trxDetail.status], ['Bayar', trxDetail.payment_status],
+                                    ['Provider', trxDetail.provider], ['Phone', trxDetail.phone],
+                                    ['Voucher', trxDetail.voucher], ['Flashsale', trxDetail.flashsale],
+                                    ['Dibuat', trxDetail.created_at], ['Update', trxDetail.updated_at]
+                                ]" :key="row[0]">
+                                    <div class="rounded-lg bg-murky-700/50 p-2">
+                                        <div class="text-[10px] text-murky-400 uppercase" x-text="row[0]"></div>
+                                        <div class="text-xs break-all" x-text="row[1] || '-'"></div>
+                                    </div>
+                                </template>
+                            </div>
+                            <div x-show="trxDetail.note">
+                                <label class="form-label">Catatan</label><p class="text-xs bg-murky-700/50 rounded p-2" x-text="trxDetail.note"></p>
+                            </div>
+                            <div>
+                                <label class="form-label">Ubah Catatan</label>
+                                <div class="flex gap-2">
+                                    <input type="text" class="form-input" x-model="trxNote">
+                                    <button @click="saveTrxNote()" class="flex-none rounded-md bg-primary-500 px-3 text-xs font-medium hover:bg-primary-400">Simpan</button>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
                 </div>
             </div>
         </div>
@@ -395,19 +1312,36 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
     <script src="/assets/js/layout.js"></script>
     <script src="/assets/js/app-data.js"></script>
     <script>
         function adminData() {
+            const today = new Date();
+            const monthAgo = new Date(Date.now() - 30 * 86400000);
+            const iso = d => d.toISOString().slice(0, 10);
             return Object.assign(layoutData(), {
                 isAdmin: false,
                 user: {},
                 tab: 'dashboard',
-                summary: {},
-                services: [],
-                transactions: [],
-                users: [],
+                modal: { open: false, type: '', data: null },
+                // data
+                stats: {}, summary: {}, services: [], transactions: [], users: [],
+                lockedUsers: [], mutations: [], deposits: [], vouchers: [], flashsales: [],
+                banners: [], blogList: [], providers: [], categories: [], tabsList: [],
+                manualOrders: [], errorLogs: [], paymentMethods: [],
+                salesReport: [], profitReport: [], summaryByStatus: [], summaryByUser: [],
+                range: { from: iso(monthAgo), to: iso(today) },
+                trxDetail: null, trxNote: '',
+                // forms
+                webCfg: { title: '', navbar: '', description: '', keyword: '', banner: '', icon: '' },
+                pagesCfg: { terms: '', privacy: '' },
+                socialCfg: { c1: '', c2: '', c3: '', c4: '', c5: '' },
+                colorCfg: { c1: '#6366f1', c2: '#0f172a', c3: '#6366f1', c4: '#334155' },
+                popupCfg: { image: '', subtitle: '', content: '', show: '' },
+                userForm: {}, balanceForm: {}, lockForm: {},
+                svcForm: {}, provForm: {}, catForm: {}, tabForm: {}, blogForm: {},
+                voucherForm: {}, flashForm: {},
+                newBanner: '',
                 initAdmin() {
                     this.loadConfig();
                     const token = localStorage.getItem('auth_token');
@@ -415,32 +1349,219 @@
                     if (!token || !u) { this.isAdmin = false; return; }
                     try { this.user = JSON.parse(u); } catch (e) { this.user = {}; }
                     this.isAdmin = this.user.level === 'Admin';
-                    if (this.isAdmin) this.loadSummary();
+                    if (this.isAdmin) {
+                        this.loadStats(); this.loadSummary(); this.loadPaymentMethods();
+                    }
                 },
-                loadSummary() {
-                    fetchJSON('/api/admin/financial-summary')
-                        .then(res => { this.summary = res.data || {}; })
-                        .catch(err => console.error(err));
+                go(tab) {
+                    this.tab = tab;
+                    const loaders = {
+                        dashboard: () => { this.loadStats(); this.loadSummary(); },
+                        dashboard_revenue: () => this.loadStats(),
+                        users_manage: () => this.loadUsers(),
+                        users_locked: () => this.loadLockedUsers(),
+                        users_mutation: () => this.loadMutations(),
+                        config_website: () => this.loadWebsiteConfig(),
+                        config_pages: () => this.loadPagesConfig(),
+                        others_banner: () => this.loadBanners(),
+                        others_social: () => this.loadConf('social'),
+                        others_color: () => this.loadConf('color'),
+                        others_popup: () => this.loadPopup(),
+                        others_blog: () => this.loadBlog(),
+                        tabs: () => this.loadTabs(),
+                        category: () => this.loadCategories(),
+                        services: () => this.loadServices(),
+                        provider: () => this.loadProviders(),
+                        transactions_manage: () => this.loadTransactions(),
+                        manual_orders: () => this.loadManualOrders(),
+                        transactions_report: () => { this.loadSalesReport(); this.loadProfitReport(); },
+                        transactions_voucher: () => this.loadVouchers(),
+                        transactions_flashsale: () => this.loadFlashsales(),
+                        financial_sales: () => this.loadSalesReport(),
+                        financial_profit: () => this.loadProfitReport(),
+                        financial_summary: () => this.loadSummaryReport(),
+                        deposit_manage: () => this.loadDeposits(),
+                        deposit_report: () => this.loadDeposits(),
+                        deposit_method: () => this.loadPaymentMethods(),
+                        server_errorlog: () => this.loadErrorLogs()
+                    };
+                    if (loaders[tab]) loaders[tab]();
                 },
-                loadServices() {
-                    fetchJSON('/api/admin/services')
-                        .then(res => { this.services = res.data || []; })
-                        .catch(err => console.error(err));
+                // ---------- generic helpers ----------
+                post(url, body, done) {
+                    fetchJSON(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+                        .then(res => {
+                            showToast(res.message || (res.result ? 'Berhasil' : 'Gagal'), res.result ? 'success' : 'error');
+                            if (res.result && done) done();
+                            if (res.result) this.modal.open = false;
+                        })
+                        .catch(() => showToast('Terjadi kesalahan jaringan'));
                 },
-                loadTransactions() {
-                    fetchJSON('/api/admin/transactions')
-                        .then(res => { this.transactions = res.data || []; })
-                        .catch(err => console.error(err));
+                deleteItem(url, id, reload) {
+                    if (!confirm('Yakin ingin menghapus?')) return;
+                    fetchJSON(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
+                        .then(res => { showToast(res.message || 'Selesai', res.result ? 'success' : 'error'); if (reload) reload(); })
+                        .catch(() => showToast('Terjadi kesalahan jaringan'));
                 },
-                loadUsers() {
-                    fetchJSON('/api/admin/users')
-                        .then(res => { this.users = res.data || []; })
-                        .catch(err => console.error(err));
+                saveConf(code, payload) { this.post('/api/admin/config/' + code, payload); },
+                barHeight(val, series) {
+                    const arr = (series || []).map(p => Number(p.value) || 0);
+                    const max = Math.max(1, ...arr);
+                    return Math.max(6, ((Number(val) || 0) / max) * 100);
                 },
                 statusClass(s) {
                     const map = { success: 'bg-emerald-500/20 text-emerald-300', pending: 'bg-yellow-500/20 text-yellow-300', process: 'bg-blue-500/20 text-blue-300', system: 'bg-blue-500/20 text-blue-300', error: 'bg-red-500/20 text-red-300' };
                     return map[s] || 'bg-gray-500/20 text-gray-300';
                 },
+                // ---------- loaders ----------
+                loadStats() { fetchJSON('/api/admin/dashboard-stats').then(r => { if (r.result) this.stats = r.data || {}; }).catch(() => {}); },
+                loadSummary() { fetchJSON('/api/admin/financial-summary').then(r => { this.summary = r.data || {}; }).catch(() => {}); },
+                loadServices() { fetchJSON('/api/admin/services').then(r => { this.services = r.data || []; }).catch(() => {}); },
+                loadTransactions() { fetchJSON('/api/admin/transactions').then(r => { this.transactions = r.data || []; }).catch(() => {}); },
+                loadUsers() { fetchJSON('/api/admin/users').then(r => { this.users = r.data || []; }).catch(() => {}); },
+                loadLockedUsers() { fetchJSON('/api/admin/users/locked').then(r => { this.lockedUsers = r.data || []; }).catch(() => {}); },
+                loadMutations() { fetchJSON('/api/admin/mutations').then(r => { this.mutations = r.data || []; }).catch(() => {}); },
+                loadDeposits() { fetchJSON('/api/admin/deposits').then(r => { this.deposits = r.data || []; }).catch(() => {}); },
+                loadVouchers() { fetchJSON('/api/admin/vouchers').then(r => { this.vouchers = r.data || []; }).catch(() => {}); },
+                loadFlashsales() { fetchJSON('/api/admin/flashsale').then(r => { this.flashsales = r.data || []; }).catch(() => {}); },
+                loadBanners() { fetchJSON('/api/admin/banners').then(r => { this.banners = r.data || []; }).catch(() => {}); },
+                loadBlog() { fetchJSON('/api/admin/blog').then(r => { this.blogList = r.data || []; }).catch(() => {}); },
+                loadProviders() { fetchJSON('/api/admin/providers').then(r => { this.providers = r.data || []; }).catch(() => {}); },
+                loadCategories() { fetchJSON('/api/admin/categories').then(r => { this.categories = r.data || []; }).catch(() => {}); },
+                loadTabs() { fetchJSON('/api/admin/tabs').then(r => { this.tabsList = r.data || []; }).catch(() => {}); },
+                loadManualOrders() { fetchJSON('/api/admin/manual-orders').then(r => { this.manualOrders = r.data || []; }).catch(() => {}); },
+                loadErrorLogs() { fetchJSON('/api/admin/error-logs').then(r => { this.errorLogs = r.data || []; }).catch(() => {}); },
+                loadPaymentMethods() { fetchJSON('/api/v1/payment-methods').then(r => { this.paymentMethods = r.data || []; }).catch(() => {}); },
+                loadWebsiteConfig() { fetchJSON('/api/admin/config/website').then(r => { if (r.result) this.webCfg = Object.assign({}, this.webCfg, r.data); }).catch(() => {}); },
+                loadPagesConfig() { fetchJSON('/api/admin/config/pages').then(r => { this.pagesCfg = Object.assign({}, this.pagesCfg, r); }).catch(() => {}); },
+                loadConf(code) {
+                    fetchJSON('/api/admin/config/' + code).then(d => {
+                        if (code === 'social') this.socialCfg = Object.assign({}, this.socialCfg, d);
+                        if (code === 'color') this.colorCfg = Object.assign({}, this.colorCfg, d);
+                    }).catch(() => {});
+                },
+                loadPopup() { fetchJSON('/api/admin/config/popup').then(d => { this.popupCfg = { image: d.c1, subtitle: d.c2, content: d.c3, show: d.c4 }; }).catch(() => {}); },
+                savePopup() { this.post('/api/admin/config/popup', this.popupCfg); },
+                loadSalesReport() {
+                    fetchJSON(`/api/admin/reports/sales?from=${this.range.from}&to=${this.range.to}`)
+                        .then(r => { this.salesReport = r.data || []; }).catch(() => {});
+                },
+                loadProfitReport() {
+                    fetchJSON(`/api/admin/reports/profit?from=${this.range.from}&to=${this.range.to}`)
+                        .then(r => { this.profitReport = r.data || []; }).catch(() => {});
+                },
+                loadSummaryReport() {
+                    fetchJSON(`/api/admin/reports/summary?from=${this.range.from}&to=${this.range.to}`)
+                        .then(r => { this.summaryByStatus = r.by_status || []; this.summaryByUser = r.by_user || []; }).catch(() => {});
+                },
+                get depositReport() {
+                    const map = {};
+                    for (const d of this.deposits) {
+                        const key = d.name || d.method || '-';
+                        if (!map[key]) map[key] = { method: key, count: 0, paid_total: 0 };
+                        map[key].count++;
+                        if (d.status === 'paid') map[key].paid_total += Number(d.amount) || 0;
+                    }
+                    return Object.values(map);
+                },
+                // ---------- actions ----------
+                updateTrxStatus(orderId, status) { this.post('/api/admin/transaction/update-status', { invoice: orderId, status }, () => this.loadTransactions()); },
+                updateTrxPayment(orderId, status) { this.post('/api/admin/transaction/update-payment-status', { invoice: orderId, status }, () => this.loadTransactions()); },
+                updateDepositStatus(depositId, status) {
+                    if (status === 'paid' && !confirm('Tandai LUNAS? Saldo user akan ditambahkan otomatis.')) { this.loadDeposits(); return; }
+                    this.post('/api/admin/deposit/status', { deposit_id: depositId, status }, () => this.loadDeposits());
+                },
+                showTrxDetail(orderId) {
+                    fetchJSON('/api/admin/transaction/detail?order_id=' + encodeURIComponent(orderId))
+                        .then(r => {
+                            if (r.result) { this.trxDetail = r.data; this.trxNote = r.data.note || ''; this.openModalRaw('trx_detail'); }
+                        })
+                        .catch(() => showToast('Gagal memuat detail'));
+                },
+                saveTrxNote() { this.post('/api/admin/transaction/update-note', { invoice: this.trxDetail.order_id, note: this.trxNote }); },
+                resendManual(orderId) { this.post('/api/admin/manual-order/resend', { order_id: orderId }, () => {}); },
+                unlockUser(username) {
+                    if (!confirm('Buka kunci akun ' + username + '?')) return;
+                    this.post('/api/admin/user/unlock', { username }, () => this.loadLockedUsers());
+                },
+                toggleFlash(id) {
+                    fetchJSON('/api/admin/flashsale/toggle', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
+                        .then(res => { showToast(res.message || 'OK', res.result ? 'success' : 'error'); this.loadFlashsales(); })
+                        .catch(() => {});
+                },
+                deleteCategory(c) {
+                    if (!confirm('Hapus kategori "' + c.name + '" BESERTA semua layanannya?')) return;
+                    fetchJSON('/api/admin/category/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: c.id }) })
+                        .then(res => { showToast(res.message || 'Selesai', res.result ? 'success' : 'error'); this.loadCategories(); })
+                        .catch(() => {});
+                },
+                addBanner() {
+                    if (!this.newBanner.trim()) return;
+                    this.post('/api/admin/banner/create', { content: this.newBanner.trim() }, () => { this.newBanner = ''; this.loadBanners(); });
+                },
+                saveWebsiteConfig() { this.post('/api/admin/config/website', this.webCfg); },
+                savePagesConfig() { this.post('/api/admin/config/pages', this.pagesCfg); },
+                // ---------- modal ----------
+                get modalTitle() {
+                    const titles = {
+                        user_add: 'Tambah User', user_edit: 'Edit User', user_balance: 'Atur Saldo', user_lock: 'Kunci Akun',
+                        svc_add: 'Tambah Layanan', svc_edit: 'Edit Layanan', prov_edit: 'Edit Provider',
+                        cat_edit: 'Edit Kategori', tab_edit: 'Edit Tab', blog_edit: 'Editor Artikel',
+                        voucher_add: 'Voucher Baru', flash_add: 'Item Flashsale', trx_detail: 'Detail Transaksi'
+                    };
+                    return titles[this.modal.type] || '';
+                },
+                openModal(type, data) {
+                    this.modal = { open: true, type, data: data || null };
+                    if (type === 'user_add') this.userForm = { username: '', name: '', email: '', phone: '', level: 'Member', password: '' };
+                    if (type === 'user_edit') this.userForm = { username: data.username, name: data.name || '', email: data.email || '', phone: data.phone || '', level: data.level, status: 'active', password: '' };
+                    if (type === 'user_balance') this.balanceForm = { amount: '', note: '' };
+                    if (type === 'user_lock') this.lockForm = { reason: '' };
+                    if (type === 'svc_add') this.svcForm = { code: '', name: '', game: '', type_name: 'games', price: 0, member: 0, reseller: 0, provider: 'DIGI', status: 'available' };
+                    if (type === 'svc_edit') this.svcForm = { id: data.id, code: data.code, name: data.name, game: data.game, price: data.price, member: data.member, reseller: data.reseller, status: data.status };
+                    if (type === 'prov_edit') this.provForm = { code: data.code, userid: data.userid || '', apikey: data.apikey || '', merchant: data.merchant || '', link: data.link || '', mode: data.mode || '' };
+                    if (type === 'cat_edit') this.catForm = data ? {
+                        id: data.id, name: data.name, owner: data.owner || '', category_type: data.type,
+                        image: data.image || '', popular: data.popular || '0', apk: data.apk || '',
+                        target_note: data.target_note || '', note: data.note || ''
+                    } : { name: '', owner: '', category_type: 'games', image: '', popular: '0', apk: '', target_note: '', note: '' };
+                    if (type === 'tab_edit') this.tabForm = data ? { id: data.id, name: data.name, icon: data.icon || '', tab_type: data.type, order: data.order } : { name: '', icon: '', tab_type: '', order: 0 };
+                    if (type === 'blog_edit') this.blogForm = data ? { id: data.id, title: data.title, banner: data.banner || '', content: data.content || '' } : { title: '', banner: '', content: '' };
+                    if (type === 'voucher_add') this.voucherForm = { code: '', category: '', discount: 0, minimum: 0, stock: 1 };
+                    if (type === 'flash_add') this.flashForm = { code: '', amount: 0 };
+                },
+                openModalRaw(type) { this.modal = { open: true, type, data: null }; },
+                submitUserForm() {
+                    if (this.modal.type === 'user_add') this.post('/api/admin/user/create', this.userForm, () => this.loadUsers());
+                    else this.post('/api/admin/user/update', this.userForm, () => this.loadUsers());
+                },
+                submitBalanceForm() {
+                    const amt = Number(this.balanceForm.amount);
+                    const action = amt < 0 ? 'deduct' : 'add';
+                    this.post('/api/admin/user/balance', { username: this.modal.data.username, action, amount: Math.abs(amt), note: this.balanceForm.note }, () => this.loadUsers());
+                },
+                submitLockForm() {
+                    this.post('/api/admin/user/lock', { username: this.modal.data.username, reason: this.lockForm.reason }, () => this.loadUsers());
+                },
+                submitServiceForm() {
+                    if (this.modal.type === 'svc_add') {
+                        // Backend expects: code, name, game, type_name, price, member_profit, reseller_profit, provider
+                        const f = this.svcForm;
+                        this.post('/api/admin/service/create', {
+                            code: f.code, name: f.name, game: f.game, type_name: f.type_name,
+                            price: Number(f.price), member_profit: Number(f.member), reseller_profit: Number(f.reseller),
+                            provider: f.provider
+                        }, () => this.loadServices());
+                    } else {
+                        this.post('/api/admin/service/update', this.svcForm, () => this.loadServices());
+                    }
+                },
+                submitProviderForm() { this.post('/api/admin/provider/edit', this.provForm, () => this.loadProviders()); },
+                submitCategoryForm() { this.post('/api/admin/category/save', this.catForm, () => this.loadCategories()); },
+                submitTabForm() { this.post('/api/admin/tab/save', this.tabForm, () => this.loadTabs()); },
+                submitBlogForm() { this.post('/api/admin/blog/save', this.blogForm, () => this.loadBlog()); },
+                submitVoucherForm() { this.post('/api/admin/voucher/create', this.voucherForm, () => this.loadVouchers()); },
+                submitFlashForm() { this.post('/api/admin/flashsale/create', this.flashForm, () => this.loadFlashsales()); },
                 logout() {
                     localStorage.removeItem('auth_token');
                     localStorage.removeItem('auth_user');

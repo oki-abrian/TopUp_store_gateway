@@ -67,7 +67,7 @@
                     <a href="/invoices" class="mobile-nav-link"><div class="flex items-center">${NAV_ICONS.invoices}<span class="ml-2">Cek Transaksi</span></div></a>
                     <a href="/page/region" class="mobile-nav-link"><div class="flex items-center">${NAV_ICONS.region}<span class="ml-2">Cek Region</span></div></a>
                     <a href="/page/pricelist" class="mobile-nav-link"><div class="flex items-center">${NAV_ICONS.price}<span class="ml-2">Harga</span></div></a>
-                    <a href="/app/guest/leaderboard" class="mobile-nav-link"><div class="flex items-center">${NAV_ICONS.leaderboard}<span class="ml-2">Leaderboard</span></div></a>
+                    <a href="/leaderboard" class="mobile-nav-link"><div class="flex items-center">${NAV_ICONS.leaderboard}<span class="ml-2">Leaderboard</span></div></a>
                     <a href="/auth/login" class="mobile-nav-link" id="mobile-login-link"><div class="flex items-center"><i class="bi bi-box-arrow-in-right"></i><span class="ml-2">Masuk</span></div></a>
                     <div class="pt-4 flex items-center justify-between">
                         <button id="close-menu-btn" onclick="document.getElementById('mobile-menu').style.display='none'" class="close-menu-button bg-gray-800 text-white p-3 rounded-lg hover:bg-gray-700 transition-all duration-300 flex items-center gap-2">
@@ -84,7 +84,7 @@
                         <a href="/invoices" class="desktop-nav-link" style="outline: none;">${ICONLY.invoices}<span class="ml-2">Cek Transaksi</span></a>
                         <a href="/page/region" class="desktop-nav-link" style="outline: none;">${ICONLY.region}<span class="ml-2">Cek Region</span></a>
                         <a href="/page/pricelist" class="desktop-nav-link" style="outline: none;">${ICONLY.price}<span class="ml-2">Harga</span></a>
-                        <a href="/app/guest/leaderboard" class="desktop-nav-link" style="outline: none;">${ICONLY.leaderboard}<span class="ml-2">Leaderboard</span></a>
+                        <a href="/leaderboard" class="desktop-nav-link" style="outline: none;">${ICONLY.leaderboard}<span class="ml-2">Leaderboard</span></a>
                     </div>
                     <div class="flex items-center gap-4">
                         <button id="theme-toggle" class="text-sm font-medium text-white bg-melpa-100 from-murky-800 to-murky-800 border rounded-xl px-3 py-2 hover:bg-murky-700 transition-colors duration-200" style="outline: none;">

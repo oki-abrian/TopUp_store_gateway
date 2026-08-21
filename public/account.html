@@ -118,7 +118,7 @@
                                 <a href="#" class="rounded-lg px-3 py-2 text-murky-200 hover:bg-murky-700" :class="{ 'active': tab === 'dashboard' }" @click.prevent="tab = 'dashboard'"><i class="bi bi-speedometer2 mr-2"></i>Dashboard</a>
                                 
                                 <div class="px-3 py-2 text-xs font-semibold text-murky-400 mt-2 mb-1">MAIN MENU</div>
-                                <a href="#" class="rounded-lg px-3 py-2 text-murky-200 hover:bg-murky-700" :class="{ 'active': tab === 'hall_of_fame' }" @click.prevent="tab = 'hall_of_fame'"><i class="bi bi-trophy mr-2"></i>Hall of Fame</a>
+                                <a href="#" class="rounded-lg px-3 py-2 text-murky-200 hover:bg-murky-700" :class="{ 'active': tab === 'hall_of_fame' }" @click.prevent="tab = 'hall_of_fame'; loadHallOfFame()"><i class="bi bi-trophy mr-2"></i>Hall of Fame</a>
                                 <a href="#" class="rounded-lg px-3 py-2 text-murky-200 hover:bg-murky-700" :class="{ 'active': tab === 'history' }" @click.prevent="tab = 'history'; loadHistory()"><i class="bi bi-clock-history mr-2"></i>Riwayat</a>
                                 
                                 <div x-data="{ openMenu: false }">
@@ -281,8 +281,30 @@
                         <template x-if="tab === 'hall_of_fame'">
                             <div class="rounded-xl bg-murky-800 p-6">
                                 <h3 class="text-xl font-semibold mb-2">Hall of Fame</h3>
-                                <p class="text-sm text-murky-300 mb-4">Top spender bulan ini.</p>
-                                <!-- This could call the existing leaderboard API -->
+                                <p class="text-sm text-murky-300 mb-4">Top spender harian, mingguan & bulanan.</p>
+                                <div class="grid gap-4 md:grid-cols-3">
+                                    <template x-for="board in [{ key: 'daily', title: 'TOP 5 Hari Ini', data: hof.daily }, { key: 'weekly', title: 'TOP 5 Minggu Ini', data: hof.weekly }, { key: 'monthly', title: 'TOP 10 Bulan Ini', data: hof.monthly }]" :key="board.key">
+                                        <div class="rounded-lg bg-murky-700/40 p-4">
+                                            <h4 class="font-semibold text-sm mb-3 text-primary-400" x-text="board.title"></h4>
+                                            <template x-if="!board.data || board.data.length === 0">
+                                                <p class="text-xs text-murky-400">Belum ada data.</p>
+                                            </template>
+                                            <ol class="space-y-2">
+                                                <template x-for="(row, idx) in (board.data || [])" :key="idx">
+                                                    <li class="flex items-center justify-between gap-2 text-sm">
+                                                        <span class="flex items-center gap-2 min-w-0">
+                                                            <span class="w-6 h-6 flex-none rounded-full flex items-center justify-center text-xs font-bold"
+                                                                :class="idx === 0 ? 'bg-yellow-400 text-yellow-900' : idx === 1 ? 'bg-slate-300 text-slate-800' : idx === 2 ? 'bg-amber-600 text-white' : 'bg-murky-600 text-murky-200'"
+                                                                x-text="idx + 1"></span>
+                                                            <span class="truncate" x-text="row.user"></span>
+                                                        </span>
+                                                        <span class="flex-none text-xs text-emerald-400">Rp <span x-text="fmt(row.total_spent)"></span></span>
+                                                    </li>
+                                                </template>
+                                            </ol>
+                                        </div>
+                                    </template>
+                                </div>
                             </div>
                         </template>
 
@@ -316,15 +338,16 @@
                         <template x-if="tab === 'deposit_new'">
                             <div class="rounded-xl bg-murky-800 p-6">
                                 <h3 class="text-xl font-semibold mb-4">Deposit Saldo</h3>
-                                <form @submit.prevent="submitDeposit" class="space-y-4">
+                                <form @submit.prevent="submitDeposit" class="space-y-4" x-init="loadDepositMethods()">
                                     <div>
                                         <label class="block text-sm font-medium text-murky-200 mb-2">Metode Pembayaran</label>
-                                        <select x-model="depositForm.method" required class="w-full rounded-md bg-murky-900 border border-murky-700 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500">
+                                        <select x-model="depositForm.method" required @change="onDepositMethodChange()" class="w-full rounded-md bg-murky-900 border border-murky-700 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500">
                                             <option value="" disabled>Pilih Metode</option>
                                             <template x-for="m in depositMethods" :key="m.code">
-                                                <option :value="m.code" x-text="m.name"></option>
+                                                <option :value="m.code" x-text="m.name + (Number(m.percent) > 0 ? ' (+)' : Number(m.flat) > 0 ? ' (+' + fmt(m.flat) + ')' : '')"></option>
                                             </template>
                                         </select>
+                                        <p class="mt-1 text-xs text-murky-400" x-show="selectedDepositMethod" x-text="'Min Rp ' + fmt(selectedDepositMethod?.min || 0) + ' • Max Rp ' + fmt(selectedDepositMethod?.max || 0)"></p>
                                     </div>
                                     <div>
                                         <label class="block text-sm font-medium text-murky-200 mb-2">Jumlah Deposit</label>
@@ -488,6 +511,7 @@
                 apiData: { uid: '', ukey: '', whitelist: '', callback: '' },
                 balance: 0,
                 tab: 'dashboard',
+                hof: { daily: [], weekly: [], monthly: [] },
                 initAccount() {
                     this.loadConfig();
                     const token = localStorage.getItem('auth_token');
@@ -503,6 +527,20 @@
                     }
                     this.authed = true;
                     this.loadDashboard();
+                },
+                loadHallOfFame() {
+                    if (this.hof.daily.length > 0) return;
+                    fetchJSON('/api/v1/leaderboard')
+                        .then(res => {
+                            if (res.result && res.data) {
+                                this.hof = {
+                                    daily: (res.data.daily || []).slice(0, 5),
+                                    weekly: (res.data.weekly || []).slice(0, 5),
+                                    monthly: (res.data.monthly || []).slice(0, 10)
+                                };
+                            }
+                        })
+                        .catch(err => console.error(err));
                 },
                 get welcomeMsg() {
                     const today = this.dash.order_today || 0;
@@ -603,6 +641,13 @@
                             .catch(err => console.error(err));
                     }
                 },
+                get selectedDepositMethod() {
+                    return (this.depositMethods || []).find(m => m.code === this.depositForm.method) || null;
+                },
+                onDepositMethodChange() {
+                    const m = this.selectedDepositMethod;
+                    if (m && Number(m.min) > 0) this.depositForm.amount = Number(m.min);
+                },
                 submitDeposit() {
                     this.depositLoading = true;
                     fetchJSON('/api/account/deposit/create', { method: 'POST', body: JSON.stringify({ username: this.user.username, ...this.depositForm }) })
@@ -610,7 +655,8 @@
                             this.depositLoading = false;
                             if(res.result) { 
                                 showToast('success', 'Deposit berhasil dibuat'); 
-                                window.location.href = '/invoices/' + res.data.invoice_id;
+                                const did = res.data.deposit_id || res.data.invoice_id || res.deposit_id;
+                                window.location.href = '/deposit/invoices/' + did;
                             }
                             else { showToast('error', res.message); }
                         })

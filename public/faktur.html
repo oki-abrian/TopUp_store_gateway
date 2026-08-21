@@ -182,6 +182,16 @@
                                                     </span>
                                                 </div>
                                             </div>
+                                            <!-- Banner penolakan dari Server Topup (two-phase checkout) -->
+                                            <div x-show="rejectedReason" x-cloak class="mt-4 rounded-lg bg-red-500/10 border border-red-500/30 p-3 text-sm text-red-300">
+                                                <i class="fa fa-ban mr-1"></i>
+                                                Pesanan ditolak oleh sistem verifikasi: <span class="font-semibold" x-text="rejectedReason"></span>.
+                                                Silakan buat pesanan ulang atau hubungi CS.
+                                            </div>
+                                            <div x-show="trx.note === 'ACCEPTED' && trx.status_payment === 'unpaid'" x-cloak class="mt-4 rounded-lg bg-blue-500/10 border border-blue-500/30 p-3 text-sm text-blue-300">
+                                                <i class="fa fa-spinner fa-spin mr-1"></i>
+                                                Harga terverifikasi. Menyiapkan tagihan pembayaran...
+                                            </div>
                                         </div>
                                     </dl>
                                 </div>
@@ -390,6 +400,7 @@
                 reviewError: '',
                 rincianOpen: true,
                 oid: '',
+                autoInvoiceDone: false,
                 initFaktur() {
                     this.loadConfig();
                     const parts = window.location.pathname.split('/').filter(Boolean);
@@ -403,19 +414,59 @@
                         .then(res => {
                             if (!res.result) { window.location.href = '/invoices'; return; }
                             this.trx = res.data;
+                            // Two-phase checkout: invoice gateway dibuat otomatis
+                            // SETELAH Server Topup meng-ACC harga otoritatif.
+                            this.maybeAutoInvoice();
                         })
                         .catch(() => { window.location.href = '/invoices'; });
+                },
+                maybeAutoInvoice() {
+                    const t = this.trx;
+                    if (this.autoInvoiceDone || !t || t.note !== 'ACCEPTED') return;
+                    if (t.status_payment !== 'unpaid' || t.status === 'error') return;
+                    this.autoInvoiceDone = true;
+                    const authUser = (function () {
+                        try { return JSON.parse(localStorage.getItem('auth_user') || 'null'); } catch (e) { return null; }
+                    })();
+                    fetchJSON('/api/invoice/create', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            service_code: t.service_code,
+                            target: t.target || t.data || '',
+                            payment_gateway: 'AUTO',
+                            payment_channel: '',
+                            customer_name: t.nickname || (t.user && t.user !== '-' ? t.user : 'Guest'),
+                            customer_email: (authUser && authUser.email) || 'guest@aruterushoppu.com',
+                            customer_phone: '',
+                            username: (t.user && t.user !== '-' ? t.user : ''),
+                            existing_order_id: t.order_id
+                        })
+                    })
+                        .then(res => {
+                            if (res.result) {
+                                const d = res.data || {};
+                                const payUrl = d.checkout_url || d.payment_url || d.pay_url;
+                                if (payUrl) { window.location.href = payUrl; return; }
+                            }
+                            location.reload();
+                        })
+                        .catch(() => { location.reload(); });
                 },
                 pollStatus() {
                     fetchJSON('/api/v1/invoice/' + encodeURIComponent(this.oid))
                         .then(res => {
                             if (res.result && res.data) {
-                                if (res.data.status !== this.trx.status || res.data.status_payment !== this.trx.status_payment) {
+                                if (res.data.status !== this.trx.status || res.data.status_payment !== this.trx.status_payment || res.data.note !== this.trx.note) {
                                     location.reload();
                                 }
                             }
                         })
                         .catch(() => {});
+                },
+                get rejectedReason() {
+                    const n = this.trx.note || '';
+                    return n.startsWith('DITOLAK:') ? n.replace('DITOLAK:', '').trim() : '';
                 },
                 get isQRMethod() {
                     const me = (this.trx.metode || '').toLowerCase();

@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="dark">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0, minimal-ui">
+    <meta content="Aruteru Shoppu Top Up Game" name="description">
+    <meta name="author" content="Sahabat Store x DhaMus">
+    <title>Verifikasi OTP — Aruteru Shoppu</title>
+    <link rel="shortcut icon" href="/imagehome/Footeraru.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="/library/assets/guest/css/e00de8768e0e97d0dsddd0b0.css">
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="/library/assets/guest/css/header.css">
+    <link rel="stylesheet" href="/library/assets/guest/css/mobile-menu.css">
+    <link rel="stylesheet" href="/library/assets/guest/css/e00de8768e0e97d0dsddd0bb.css">
+    <link rel="stylesheet" href="/library/assets/guest/css/app.css">
+    <link rel="stylesheet" href="/library/assets/guest/css/home.css">
+    <link rel="stylesheet" href="/library/assets/guest/css/order.css">
+    <link rel="stylesheet" href="/library/assets/guest/css/footer.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        murky: {
+                            200: '#e2e8f0', 300: '#cbd5e1', 400: '#94a3b8', 500: '#64748b',
+                            600: '#475569', 700: '#334155', 800: '#1e293b', 900: '#0f172a'
+                        },
+                        'dark-new3': '#182232',
+                        primary: { 400: '#818cf8', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        :root { --warna_1:#1e293b; --warna_2:#0f172a; --warna_3:#6366f1; --warna_4:#334155; }
+        [x-cloak] { display: none !important; }
+        .otp-input { letter-spacing: 0.4em; text-align: center; font-size: 1.5rem; font-weight: 700; }
+    </style>
+    <script defer src="//cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body class="text-white antialiased bg-[#0f172a]" data-aruteru-layout>
+    <div id="site-header"></div>
+
+    <main class="relative">
+        <div x-data="otpData()" x-init="initOtp()">
+            <div class="container py-12 md:py-16">
+                <div class="max-w-md mx-auto rounded-xl bg-dark-new3 p-8 border border-murky-600">
+                    <div class="text-center mb-6">
+                        <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary-500/20 mb-4">
+                            <i class="fa fa-shield text-2xl text-primary-400"></i>
+                        </div>
+                        <h1 class="text-2xl font-bold">Verifikasi OTP</h1>
+                        <p class="mt-2 text-sm text-murky-400">
+                            Masukkan kode OTP yang telah dikirim ke WhatsApp Anda untuk menyelesaikan pembayaran dengan saldo.
+                        </p>
+                    </div>
+
+                    <template x-if="orderId">
+                        <div class="space-y-4">
+                            <div class="rounded-lg bg-murky-800 p-4 text-sm space-y-2">
+                                <div class="flex justify-between">
+                                    <span class="text-murky-400">Invoice</span>
+                                    <span class="font-medium" x-text="orderId"></span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-murky-400">Akun</span>
+                                    <span class="font-medium" x-text="username || '-'"></span>
+                                </div>
+                                <div class="flex justify-between" x-show="invoice.total > 0">
+                                    <span class="text-murky-400">Total</span>
+                                    <span class="font-medium">Rp <span x-text="fmt(invoice.total)"></span></span>
+                                </div>
+                                <div class="flex justify-between" x-show="invoice.status">
+                                    <span class="text-murky-400">Status</span>
+                                    <span class="font-medium capitalize" x-text="invoice.status || '-'"></span>
+                                </div>
+                            </div>
+
+                            <div x-show="!verified" x-cloak>
+                                <label class="block text-sm font-medium mb-2">Kode OTP (6 digit)</label>
+                                <input type="text" inputmode="numeric" maxlength="6" x-model="otp"
+                                    class="otp-input w-full rounded-lg bg-murky-200 px-4 py-3 text-murky-900 placeholder-murky-400 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                    placeholder="••••••" @keydown.enter="submitOtp()">
+                                <p class="mt-2 text-xs text-murky-400">OTP berlaku 10 menit. Maksimal 3 percobaan.</p>
+
+                                <button @click="submitOtp()" :disabled="submitting || otp.length !== 6"
+                                    class="mt-4 w-full inline-flex items-center justify-center rounded-lg bg-primary-500 px-4 py-3 text-sm font-semibold text-white duration-300 hover:bg-primary-400 disabled:opacity-50 disabled:cursor-not-allowed">
+                                    <span x-text="submitting ? 'Memverifikasi...' : 'Bayar Sekarang'"></span>
+                                </button>
+                                <p x-show="error" x-cloak class="mt-3 text-sm text-red-400 text-center" x-text="error"></p>
+                            </div>
+
+                            <div x-show="verified" x-cloak class="rounded-lg bg-emerald-500/10 border border-emerald-500/30 p-4 text-center">
+                                <i class="fa fa-check-circle text-emerald-400 text-2xl mb-2"></i>
+                                <p class="text-sm text-emerald-300 font-medium">Pembayaran berhasil! Pesanan sedang diproses.</p>
+                                <a :href="'/invoices/' + orderId" class="mt-3 inline-block rounded-lg bg-primary-500 px-4 py-2 text-sm font-medium text-white hover:bg-primary-400">Lihat Invoice</a>
+                            </div>
+                        </div>
+                    </template>
+
+                    <template x-if="!orderId">
+                        <div class="text-center py-6">
+                            <p class="text-sm text-red-400">Invoice tidak ditemukan.</p>
+                            <a href="/" class="mt-3 inline-block rounded-lg bg-primary-500 px-4 py-2 text-sm text-white hover:bg-primary-400">Kembali ke Beranda</a>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="site-footer"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/assets/js/layout.js"></script>
+    <script src="/assets/js/app-data.js"></script>
+    <script>
+        function otpData() {
+            return Object.assign(layoutData(), {
+                orderId: '',
+                username: '',
+                otp: '',
+                submitting: false,
+                verified: false,
+                error: '',
+                invoice: {},
+                initOtp() {
+                    this.loadConfig();
+                    const params = new URLSearchParams(window.location.search);
+                    this.orderId = params.get('order_id') || '';
+                    const user = localStorage.getItem('auth_user');
+                    if (user) {
+                        try { this.username = JSON.parse(user).username || user; } catch (e) { this.username = user; }
+                    }
+                    if (this.orderId) this.pollInvoice();
+                },
+                pollInvoice() {
+                    fetchJSON('/api/v1/invoice/' + encodeURIComponent(this.orderId))
+                        .then(res => {
+                            if (res.result && res.data) {
+                                this.invoice = res.data;
+                                // Already settled by another tab / earlier verification
+                                if (res.data.payment_status === 'paid' && res.data.status !== 'pending') {
+                                    this.verified = true;
+                                }
+                            }
+                        })
+                        .catch(() => {});
+                },
+                submitOtp() {
+                    if (!this.username) {
+                        this.error = 'Silakan login terlebih dahulu.';
+                        setTimeout(() => { window.location.href = '/auth/login'; }, 1200);
+                        return;
+                    }
+                    if (this.otp.length !== 6) return;
+                    this.submitting = true;
+                    this.error = '';
+                    fetchJSON('/api/invoice/verify-otp', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ order_id: this.orderId, username: this.username, otp: this.otp })
+                    })
+                        .then(res => {
+                            this.submitting = false;
+                            if (res.result) {
+                                showToast('OTP valid, memproses pesanan...', 'success');
+                                let attempts = 0;
+                                const check = setInterval(() => {
+                                    attempts++;
+                                    fetchJSON('/api/v1/invoice/' + encodeURIComponent(this.orderId))
+                                        .then(r => {
+                                            if (r.result && r.data && r.data.payment_status === 'paid') {
+                                                clearInterval(check);
+                                                this.verified = true;
+                                                this.invoice = r.data;
+                                            } else if (attempts >= 10) {
+                                                clearInterval(check);
+                                                this.error = 'Verifikasi masih diproses. Cek halaman invoice sesaat lagi.';
+                                            }
+                                        })
+                                        .catch(() => {});
+                                }, 2000);
+                            } else {
+                                this.error = res.message || 'Kode OTP salah atau kedaluwarsa.';
+                            }
+                        })
+                        .catch(() => { this.submitting = false; this.error = 'Terjadi kesalahan, coba lagi.'; });
+                },
+                fmt
+            });
+        }
+    </script>
+</body>
+</html>

@@ -1,6 +1,5 @@
 use crate::error::AppError;
 use crate::models::{ApiOrderDataResponse, ApiOrderRequest, ApiOrderResponse, Flashsale, Service, User, UserApi};
-use crate::providers::digiflazz::DigiFlazzClient;
 use crate::state::AppState;
 use md5::{Digest, Md5};
 use sqlx::MySql;
@@ -82,26 +81,17 @@ pub async fn process_api_order(
         return Err(AppError::HoldBalanceViolation { required_hold });
     }
 
-    let order_id = format!("ORD{}{}", chrono::Utc::now().format("%Y%M%S"), rand::random::<u16>());
-
-    sqlx::query("UPDATE users SET balance = balance - ? WHERE username = ?")
-        .bind(total_price)
-        .bind(&user.username)
-        .execute(&mut *tx)
-        .await?;
-
-    let note = format!("Order API :: {}", order_id);
-    sqlx::query("INSERT INTO mutation (username, type, amount, note, date_cr) VALUES (?, '-', ?, ?, NOW())")
-        .bind(&user.username)
-        .bind(total_price)
-        .bind(&note)
-        .execute(&mut *tx)
-        .await?;
+    // ============================================================
+    // DUA FASE — otoritas penuh di Server Topup (web TIDAK dipercaya):
+    // Web hanya membuat baris order UNPAID lalu broadcast [API_ORDER].
+    // Potong saldo, validasi harga final, dan topup DILAKUKAN SERVER TOPUP.
+    // Reseller memantau status lewat endpoint status (polling).
+    // ============================================================
+    let order_id = format!("ORD{}{}", chrono::Utc::now().format("%Y%m%d%H%M%S"), rand::random::<u16>());
 
     sqlx::query(
-        "INSERT INTO transaction (order_id, order_tid, user, code, service_name, game, target, price, profit, status, payment_status, provider, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'process', 'paid', ?, NOW(), NOW())"
+        "INSERT INTO transaction (order_id, order_tid, user, code, service_name, game, target, price, profit, status, payment_status, provider, created_at, updated_at) VALUES (?, '', ?, ?, ?, ?, ?, ?, ?, 'pending', 'unpaid', ?, NOW(), NOW())"
     )
-    .bind(&order_id)
     .bind(&order_id)
     .bind(&user.username)
     .bind(&service.code)
@@ -111,46 +101,15 @@ pub async fn process_api_order(
     .bind(total_price)
     .bind(profit)
     .bind(&service.provider)
-    .execute(&mut *tx)
+    .execute(&state.db)
     .await?;
 
-    tx.commit().await?;
-
-    if service.provider == "DIGI" {
-        let digi_username = std::env::var("DIGIFLAZZ_USERNAME").unwrap_or_default();
-        let digi_apikey = std::env::var("DIGIFLAZZ_APIKEY").unwrap_or_default();
-        let digi_client = DigiFlazzClient::new(digi_username, digi_apikey);
-
-        let topup_res = digi_client
-            .topup(&state.http_client, &service.code, &req.target, &order_id)
-            .await;
-
-        match topup_res {
-            Ok(res) if res.success => {
-                sqlx::query("UPDATE transaction SET order_tid = ?, status = 'process' WHERE order_id = ?")
-                    .bind(&res.trxid)
-                    .bind(&order_id)
-                    .execute(&state.db)
-                    .await?;
-            }
-            Ok(res) => {
-                let mut refund_tx = state.db.begin().await?;
-                sqlx::query("UPDATE users SET balance = balance + ? WHERE username = ?")
-                    .bind(total_price)
-                    .bind(&user.username)
-                    .execute(&mut *refund_tx)
-                    .await?;
-                sqlx::query("UPDATE transaction SET status = 'error' WHERE order_id = ?")
-                    .bind(&order_id)
-                    .execute(&mut *refund_tx)
-                    .await?;
-                refund_tx.commit().await?;
-
-                return Err(AppError::ProviderError(res.message));
-            }
-            Err(e) => return Err(e),
-        }
-    }
+    let clean_svc_name = service.name.replace(' ', "_").replace(';', "");
+    let msg = format!(
+        "[API_ORDER] {} {} {} {} {} {} {} -",
+        order_id, user.username, service.code, req.target, service.provider, total_price, clean_svc_name
+    );
+    let _ = crate::domain::telegram::sender::send_report_to_fulfillment(&msg).await;
 
     Ok(ApiOrderResponse {
         result: true,
@@ -159,10 +118,10 @@ pub async fn process_api_order(
             data: req.target,
             code: service.code,
             service: service.name,
-            status: "process".to_string(),
-            note: "Berhasil dibayar".to_string(),
+            status: "pending".to_string(),
+            note: "Menunggu verifikasi harga oleh Server Topup".to_string(),
             price: total_price,
         }),
-        message: "Pesanan berhasil diproses".to_string(),
+        message: "Pesanan diterima — menunggu verifikasi Server Topup. Pantau status via endpoint status.".to_string(),
     })
 }

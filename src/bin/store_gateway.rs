@@ -1,5 +1,6 @@
 use axum::{
     extract::{Query, State},
+    http::HeaderMap,
     routing::{get, post},
     Json, Router,
 };
@@ -9,6 +10,7 @@ use rust_backend::{
     domain::{
         account::service::{generate_api_keys, get_user_mutations, get_user_profile, get_user_transactions, update_api_settings, UpdateProfileRequest, ChangePasswordRequest, UpdateApiSettingsRequest, DepositRequest},
         admin::service::{admin_adjust_user_balance, admin_create_service, admin_get_financial_summary, admin_lock_user_account, AdminCreateServiceRequest, AdminLockAccountRequest, AdminUpdateUserBalanceRequest},
+        admin::transaction::{update_payment_status, update_transaction_note, update_transaction_status, AdminUpdatePaymentStatusRequest, AdminUpdateTransactionNoteRequest, AdminUpdateTransactionStatusRequest},
         auth::{models::{LoginRequest, RegisterRequest}, service::{login_user, register_user}},
     },
     error::AppError,
@@ -33,6 +35,147 @@ fn md5_hash(s: &str) -> String {
     let mut hasher = Md5::new();
     hasher.update(s.as_bytes());
     format!("{:x}", hasher.finalize())
+}
+
+// ============================================================
+// ANTI-BRUTEFORCE RATE LIMITER (sliding window, in-memory)
+// ============================================================
+
+static RATE_BUCKETS: std::sync::LazyLock<dashmap::DashMap<String, Vec<i64>>> =
+    std::sync::LazyLock::new(|| dashmap::DashMap::new());
+
+static SWEEP_TICK: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+
+/// Eviksi berkala: buang key yang isinya sudah basi (anti memory growth).
+fn maybe_sweep_buckets(now: i64) {
+    if SWEEP_TICK.fetch_add(1, std::sync::atomic::Ordering::Relaxed) % 1024 != 0 {
+        return;
+    }
+    RATE_BUCKETS.retain(|_, v| {
+        v.retain(|ts| now - *ts < 3600);
+        !v.is_empty()
+    });
+}
+
+/// Sliding-window limiter: false = DITOLAK (melebihi `max` dalam `window_secs`).
+fn rate_limit(key: &str, max: usize, window_secs: i64) -> bool {
+    let now = chrono::Utc::now().timestamp();
+    maybe_sweep_buckets(now);
+    let mut entry = RATE_BUCKETS.entry(key.to_string()).or_default();
+    entry.retain(|ts| now - *ts < window_secs);
+    if entry.len() >= max {
+        return false;
+    }
+    entry.push(now);
+    true
+}
+
+/// Hitung kegagalan (mis. kode voucher salah). Return false bila sudah melewati batas.
+fn record_failure(key: &str, max: usize, window_secs: i64) -> bool {
+    let now = chrono::Utc::now().timestamp();
+    maybe_sweep_buckets(now);
+    let mut entry = RATE_BUCKETS.entry(key.to_string()).or_default();
+    entry.retain(|ts| now - *ts < window_secs);
+    if entry.len() >= max {
+        return false;
+    }
+    entry.push(now);
+    true
+}
+
+fn reset_failures(key: &str) {
+    RATE_BUCKETS.remove(key);
+}
+
+// ============================================================
+// REKONSILIASI PEMBAYARAN (at-least-once delivery)
+// Notifikasi "order sudah dibayar" ke fulfillment dikirim ULANG
+// tiap 60 detik sampai fulfillment membalas [STATUS_UPDATE] untuk
+// order tersebut. Mencegah kasus: user bayar tapi pesan hilang.
+// ============================================================
+static PENDING_PAID: std::sync::LazyLock<dashmap::DashMap<String, (i64, u32)>> =
+    std::sync::LazyLock::new(|| dashmap::DashMap::new());
+const PAID_RESEND_MAX: u32 = 60; // 60x x 60s = 1 jam, lalu menyerah + alarm log
+
+// Cache invoice gateway per order (idempoten): refresh/tab ganda mendapat
+// TAGIHAN YANG SAMA, bukan tagihan baru di gateway (anti bayar 2x).
+static INVOICE_CACHE: std::sync::LazyLock<dashmap::DashMap<String, (i64, serde_json::Value)>> =
+    std::sync::LazyLock::new(|| dashmap::DashMap::new());
+
+async fn notify_payment_to_fulfillment(order_id: &str) {
+    let now = chrono::Utc::now().timestamp();
+    match PENDING_PAID.get_mut(order_id) {
+        Some(mut v) => {
+            v.0 = now;
+            v.1 += 1;
+        }
+        None => {
+            PENDING_PAID.insert(order_id.to_string(), (now, 1));
+        }
+    }
+    // Format sama dengan webhook lama (bare OID → dibungkus [REPORT] oleh sender)
+    if let Err(e) = rust_backend::domain::telegram::sender::send_report_to_fulfillment(order_id).await {
+        tracing::error!("[PAID RECONCILER] Gagal enqueue notif pembayaran {}: {}", order_id, e);
+    }
+}
+
+pub(crate) async fn start_paid_reconciler(db: sqlx::MySqlPool) {
+    tokio::spawn(async move {
+        tracing::info!("[PAID RECONCILER] Worker aktif — kirim ulang notif bayar tiap 60 detik sampai di-ACK.");
+        loop {
+            tokio::time::sleep(std::time::Duration::from_secs(60)).await;
+            let now = chrono::Utc::now().timestamp();
+            for kv in PENDING_PAID.iter() {
+                let oid = kv.key().clone();
+                let (last_sent, attempts) = *kv.value();
+                if now - last_sent < 60 {
+                    continue;
+                }
+                drop(kv);
+                // Cek kondisi terkini di DB web
+                let row = sqlx::query("SELECT status, payment_status FROM transaction WHERE order_id = ? LIMIT 1")
+                    .bind(&oid)
+                    .fetch_optional(&db)
+                    .await
+                    .ok()
+                    .flatten();
+                if let Some(r) = row {
+                    use sqlx::Row;
+                    let status: String = r.try_get("status").unwrap_or_default();
+                    let pay: String = r.try_get("payment_status").unwrap_or_default();
+                    if status == "success" || status == "error" {
+                        PENDING_PAID.remove(&oid); // sudah tuntas / gagal final
+                        continue;
+                    }
+                    if pay == "unpaid" {
+                        PENDING_PAID.remove(&oid); // invoice batal/belum jadi — bukan urusan topup
+                        continue;
+                    }
+                } else {
+                    PENDING_PAID.remove(&oid);
+                    continue;
+                }
+                if attempts >= PAID_RESEND_MAX {
+                    tracing::error!("[PAID RECONCILIATION ALERT] Order {} dibayar tapi TIDAK pernah diproses fulfillment setelah {} percobaan! PERLU TINDAKAN MANUAL.", oid, attempts);
+                    PENDING_PAID.remove(&oid);
+                    continue;
+                }
+                tracing::warn!("[PAID RECONCILER] Kirim ulang notif pembayaran {} (percobaan {}/{})", oid, attempts + 1, PAID_RESEND_MAX);
+                notify_payment_to_fulfillment(&oid).await;
+            }
+        }
+    });
+}
+
+fn client_ip_from_headers(headers: &HeaderMap) -> String {
+    headers.get("x-forwarded-for")
+        .and_then(|h| h.to_str().ok())
+        .and_then(|v| v.split(',').next())
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .or_else(|| headers.get("x-real-ip").and_then(|h| h.to_str().ok()))
+        .unwrap_or("unknown")
+        .to_string()
 }
 
 #[derive(Deserialize)]
@@ -68,6 +211,12 @@ pub struct CreateInvoiceRequest {
     pub customer_email: String,
     pub customer_phone: String,
     pub username: Option<String>,
+    #[serde(default)]
+    pub voucher: Option<String>,
+    /// Mode "tempel": pakai order yang sudah dibuat oleh /api/v1/order/submit
+    /// (tanpa duplikasi baris transaksi). Invoice gateway memakai order_id ini.
+    #[serde(default)]
+    pub existing_order_id: Option<String>,
 }
 
 #[derive(serde::Deserialize)]
@@ -98,6 +247,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // START WEB STATUS CALLBACK LISTENER (Menangkap status sukses DigiFlazz & SN dari Server Topup)
     start_web_callback_listener(db_pool.clone()).await;
+    start_paid_reconciler(db_pool.clone()).await;
 
     // INIT MTPROTO TELEGRAM CLIENT
     if let Err(e) = rust_backend::domain::telegram::sender::init_telegram_sender().await {
@@ -123,6 +273,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/page/terms-and-condition", get(serve_terms_page))
         .route("/page/review", get(serve_review_page))
         .route("/leaderboard", get(serve_leaderboard_page))
+        .route("/order/verify-otp", get(serve_verify_otp_page))
+        .route("/deposit/invoices/:did", get(serve_deposit_faktur_page))
         .route("/api/service", get(handle_list_services))
         .route("/api/check-ml", get(handle_check_ml))
         .route("/api/check-game", get(handle_check_game))
@@ -146,11 +298,56 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/account/deposit/history", get(handle_deposit_history))
         .route("/api/account/deposit/create", post(handle_deposit_create))
         .route("/api/admin/service/create", post(handle_admin_create_service))
+        .route("/api/admin/service/update", post(handle_admin_update_service))
+        .route("/api/admin/service/delete", post(handle_admin_delete_service))
         .route("/api/admin/user/balance", post(handle_admin_adjust_balance))
         .route("/api/admin/user/lock", post(handle_admin_lock_account))
+        .route("/api/admin/user/unlock", post(handle_admin_unlock_account))
+        .route("/api/admin/user/create", post(handle_admin_create_user))
+        .route("/api/admin/user/update", post(handle_admin_update_user))
+        .route("/api/admin/users/locked", get(handle_admin_locked_users))
+        .route("/api/admin/mutations", get(handle_admin_mutations))
+        .route("/api/admin/deposits", get(handle_admin_deposits))
+        .route("/api/admin/deposit/status", post(handle_admin_deposit_status))
+        .route("/api/admin/vouchers", get(handle_admin_vouchers))
+        .route("/api/admin/voucher/create", post(handle_admin_voucher_create))
+        .route("/api/admin/voucher/delete", post(handle_admin_voucher_delete))
+        .route("/api/admin/flashsale", get(handle_admin_flashsale))
+        .route("/api/admin/flashsale/create", post(handle_admin_flashsale_create))
+        .route("/api/admin/flashsale/toggle", post(handle_admin_flashsale_toggle))
+        .route("/api/admin/flashsale/delete", post(handle_admin_flashsale_delete))
+        .route("/api/admin/banners", get(handle_admin_banners))
+        .route("/api/admin/banner/create", post(handle_admin_banner_create))
+        .route("/api/admin/banner/delete", post(handle_admin_banner_delete))
+        .route("/api/admin/blog", get(handle_admin_blog_list))
+        .route("/api/admin/blog/save", post(handle_admin_blog_save))
+        .route("/api/admin/blog/delete", post(handle_admin_blog_delete))
+        .route("/api/admin/providers", get(handle_admin_providers))
+        .route("/api/admin/provider/edit", post(handle_admin_provider_edit))
+        .route("/api/admin/categories", get(handle_admin_categories))
+        .route("/api/admin/category/save", post(handle_admin_category_save))
+        .route("/api/admin/category/delete", post(handle_admin_category_delete))
+        .route("/api/admin/tabs", get(handle_admin_tabs))
+        .route("/api/admin/tab/save", post(handle_admin_tab_save))
+        .route("/api/admin/tab/delete", post(handle_admin_tab_delete))
+        .route("/api/admin/config/popup", get(handle_admin_conf_popup_get_only).post(handle_admin_conf_popup_post))
+        .route("/api/admin/config/social", get(handle_admin_conf_social_get).post(handle_admin_conf_social_post))
+        .route("/api/admin/config/colors", get(handle_admin_conf_colors_get).post(handle_admin_conf_colors_post))
+        .route("/api/admin/config/pages", get(handle_admin_conf_pages_get).post(handle_admin_conf_pages_post))
+        .route("/api/admin/reports/sales", get(handle_admin_report_sales))
+        .route("/api/admin/reports/profit", get(handle_admin_report_profit))
+        .route("/api/admin/reports/summary", get(handle_admin_report_summary))
+        .route("/api/admin/error-logs", get(handle_admin_error_logs))
+        .route("/api/admin/dashboard-stats", get(handle_admin_dashboard_stats))
+        .route("/api/admin/manual-orders", get(handle_admin_manual_orders))
+        .route("/api/admin/manual-order/resend", post(handle_admin_manual_resend))
         .route("/api/admin/financial-summary", get(handle_admin_financial_summary))
         .route("/api/admin/services", get(handle_admin_list_services))
         .route("/api/admin/transactions", get(handle_admin_list_transactions))
+        .route("/api/admin/transaction/detail", get(handle_admin_transaction_detail))
+        .route("/api/admin/transaction/update-status", post(handle_admin_update_transaction_status))
+        .route("/api/admin/transaction/update-payment-status", post(handle_admin_update_payment_status))
+        .route("/api/admin/transaction/update-note", post(handle_admin_update_transaction_note))
         .route("/api/admin/users", get(handle_admin_list_users))
         .route("/api/admin/config/website", get(handle_admin_config_website_get).post(handle_admin_config_website_post))
         .route("/api/admin/transaction/update-status", post(handle_admin_update_transaction_status))
@@ -170,11 +367,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/v1/pricelist/:code", get(handle_pricelist))
         .route("/api/v1/payment-methods", get(handle_payment_methods))
         .route("/api/v1/order/submit", post(handle_submit_order))
+        .route("/api/v1/voucher/check", post(handle_voucher_check))
         .route("/api/v1/review/submit", post(handle_review_submit))
         .route("/api/v1/reviews", get(handle_reviews))
+        .route("/api/v1/deposit/:did", get(handle_deposit_detail))
         .route("/api/v1/forgot-password", post(handle_forgot_password))
         .route("/api/v1/external/service", post(handle_external_service))
         .route("/api/v1/external/status", post(handle_external_status))
+        .route("/api/v1/external/profile", post(handle_external_profile))
+        .route("/api/v1/external/order", post(handle_external_order))
         .nest_service("/library", ServeDir::new("public/library"))
         .nest_service("/imagehome", ServeDir::new("public/imagehome"))
         .fallback_service(ServeDir::new("public"))
@@ -284,7 +485,7 @@ async fn handle_tripay_webhook(
             .bind(&payload.merchant_ref)
             .execute(&state.db)
             .await;
-        let _ = rust_backend::domain::telegram::sender::send_report_to_fulfillment(&payload.merchant_ref).await;
+        notify_payment_to_fulfillment(&payload.merchant_ref).await;
     }
 
     Ok(Json(json!({ "success": true })))
@@ -362,7 +563,7 @@ async fn handle_duitku_webhook(
             .bind(&payload.merchantOrderId)
             .execute(&state.db)
             .await;
-        let _ = rust_backend::domain::telegram::sender::send_report_to_fulfillment(&payload.merchantOrderId).await;
+        notify_payment_to_fulfillment(&payload.merchantOrderId).await;
     }
 
     Ok(Json(json!({ "success": true })))
@@ -442,7 +643,7 @@ async fn handle_tokopay_webhook(
             .bind(&payload.reff_id)
             .execute(&state.db)
             .await;
-        let _ = rust_backend::domain::telegram::sender::send_report_to_fulfillment(&payload.reff_id).await;
+        notify_payment_to_fulfillment(&payload.reff_id).await;
     }
 
     Ok(Json(json!({ "success": true })))
@@ -517,7 +718,7 @@ async fn handle_paydisini_webhook(
             .bind(&payload.unique_code)
             .execute(&state.db)
             .await;
-        let _ = rust_backend::domain::telegram::sender::send_report_to_fulfillment(&payload.unique_code).await;
+        notify_payment_to_fulfillment(&payload.unique_code).await;
     }
 
     Ok(Json(json!({ "success": true })))
@@ -583,6 +784,12 @@ async fn serve_review_page() -> Result<axum::response::Response, AppError> {
 }
 async fn serve_leaderboard_page() -> Result<axum::response::Response, AppError> {
     serve_static_page(axum::extract::Path("leaderboard".to_string())).await
+}
+async fn serve_verify_otp_page() -> Result<axum::response::Response, AppError> {
+    serve_static_page(axum::extract::Path("verify-otp".to_string())).await
+}
+async fn serve_deposit_faktur_page() -> Result<axum::response::Response, AppError> {
+    serve_static_page(axum::extract::Path("deposit-faktur".to_string())).await
 }
 
 async fn handle_list_services(
@@ -843,8 +1050,10 @@ async fn handle_register_resend(
 
 async fn handle_account_dashboard(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Query(query): Query<UserQuery>,
 ) -> Result<Json<serde_json::Value>, AppError> {
+    require_session(&state, &headers, Some(&query.username)).await?;
     let user = get_user_profile(&state.db, &query.username).await?;
     let balance = user.balance;
     let level = user.level;
@@ -893,40 +1102,50 @@ async fn handle_account_dashboard(
 
 async fn handle_profile(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Query(query): Query<UserQuery>,
 ) -> Result<Json<serde_json::Value>, AppError> {
+    require_session(&state, &headers, Some(&query.username)).await?;
     let profile = get_user_profile(&state.db, &query.username).await?;
     Ok(Json(json!({ "result": true, "data": profile })))
 }
 
 async fn handle_mutations(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Query(query): Query<UserQuery>,
 ) -> Result<Json<serde_json::Value>, AppError> {
+    require_session(&state, &headers, Some(&query.username)).await?;
     let mutations = get_user_mutations(&state.db, &query.username).await?;
     Ok(Json(json!({ "result": true, "data": mutations })))
 }
 
 async fn handle_transactions(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Query(query): Query<UserQuery>,
 ) -> Result<Json<serde_json::Value>, AppError> {
+    require_session(&state, &headers, Some(&query.username)).await?;
     let trxs = get_user_transactions(&state.db, &query.username).await?;
     Ok(Json(json!({ "result": true, "data": trxs })))
 }
 
 async fn handle_generate_keys(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Json(query): Json<UserQuery>,
 ) -> Result<Json<serde_json::Value>, AppError> {
+    require_session(&state, &headers, Some(&query.username)).await?;
     let api_keys = generate_api_keys(&state.db, &query.username).await?;
     Ok(Json(json!({ "result": true, "data": api_keys })))
 }
 
 async fn handle_update_profile(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Json(payload): Json<UpdateProfileRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
+    require_session(&state, &headers, Some(&payload.username)).await?;
     sqlx::query("UPDATE users SET name = ?, email = ?, phone = ? WHERE username = ?")
         .bind(&payload.name)
         .bind(&payload.email)
@@ -939,8 +1158,10 @@ async fn handle_update_profile(
 
 async fn handle_change_password(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Json(payload): Json<ChangePasswordRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
+    require_session(&state, &headers, Some(&payload.username)).await?;
     use bcrypt::{hash, verify, DEFAULT_COST};
     use sqlx::Row;
     
@@ -969,8 +1190,10 @@ async fn handle_change_password(
 
 async fn handle_api_settings(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Query(query): Query<UserQuery>,
 ) -> Result<Json<serde_json::Value>, AppError> {
+    require_session(&state, &headers, Some(&query.username)).await?;
     let api_keys: Option<rust_backend::models::UserApi> = sqlx::query_as::<MySql, rust_backend::models::UserApi>("SELECT * FROM users_api WHERE user = ?")
         .bind(&query.username)
         .fetch_optional(&state.db)
@@ -985,16 +1208,20 @@ async fn handle_api_settings(
 
 async fn handle_update_api_settings(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Json(payload): Json<UpdateApiSettingsRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
+    require_session(&state, &headers, Some(&payload.username)).await?;
     update_api_settings(&state.db, &payload.username.clone(), payload).await?;
     Ok(Json(json!({ "result": true, "message": "Pengaturan API berhasil disimpan" })))
 }
 
 async fn handle_activity(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Query(query): Query<UserQuery>,
 ) -> Result<Json<serde_json::Value>, AppError> {
+    require_session(&state, &headers, Some(&query.username)).await?;
     use sqlx::Row;
     
     // 1. Try querying users_cookie for active sessions
@@ -1037,86 +1264,134 @@ async fn handle_activity(
 }
 
 async fn handle_deposit_methods(
-    State(_state): State<AppState>,
+    State(state): State<AppState>,
+    headers: HeaderMap,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    // Return mock Paydisini deposit methods
-    let methods = vec![
-        json!({"code": "11", "name": "QRIS (Semua Pembayaran)"}),
-        json!({"code": "12", "name": "OVO"}),
-        json!({"code": "13", "name": "GOPAY"}),
-        json!({"code": "14", "name": "DANA"}),
-        json!({"code": "15", "name": "LINKAJA"}),
-        json!({"code": "16", "name": "SHOPEEPAY"}),
-    ];
-    Ok(Json(json!({ "result": true, "data": methods })))
+    require_session(&state, &headers, None).await?;
+    use sqlx::Row;
+
+    // Real methods from `metode` table (parity with PHP account/deposit/ajax.php).
+    // Deposit excludes the 'app' (saldo) type.
+    let rows = sqlx::query("SELECT * FROM metode WHERE status = 'on' AND type != 'app' ORDER BY type ASC, id ASC")
+        .fetch_all(&state.db)
+        .await
+        .unwrap_or_default();
+
+    let list: Vec<serde_json::Value> = rows.iter().map(|r| {
+        let code = r.try_get::<String, _>("code").unwrap_or_default();
+        let name = r.try_get::<String, _>("name").unwrap_or_default();
+        let mtype = r.try_get::<String, _>("type").unwrap_or_default();
+        let min_val = r.try_get::<f64, _>("min").unwrap_or(10000.0);
+        let max_val = r.try_get::<f64, _>("max").unwrap_or(5000000.0);
+        let fee_using = r.try_get::<String, _>("fee_using").unwrap_or_else(|_| "merchant".to_string());
+        let fee_type = r.try_get::<String, _>("fee_type").unwrap_or_else(|_| "+".to_string());
+        let percent = r.try_get::<f64, _>("percent").unwrap_or(0.0);
+        let flat = r.try_get::<f64, _>("flat").unwrap_or(0.0);
+        let image = r.try_get::<String, _>("image").unwrap_or_default();
+        let provider = r.try_get::<String, _>("provider").unwrap_or_else(|_| "PAYDISINI".to_string());
+        json!({
+            "code": code,
+            "name": name,
+            "type": mtype,
+            "min": min_val,
+            "max": max_val,
+            "fee_using": fee_using,
+            "fee_type": fee_type,
+            "percent": percent,
+            "flat": flat,
+            "image": image,
+            "provider": provider,
+        })
+    }).collect();
+
+    Ok(Json(json!({ "result": true, "data": list })))
 }
 
 async fn handle_deposit_history(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Query(query): Query<UserQuery>,
 ) -> Result<Json<serde_json::Value>, AppError> {
+    require_session(&state, &headers, Some(&query.username)).await?;
     // Query deposit table
     use sqlx::Row;
-    let rows = sqlx::query("SELECT id, method, amount, status FROM deposit WHERE username = ? ORDER BY id DESC LIMIT 50")
+    let rows = sqlx::query("SELECT id, deposit_id, method, amount, fee, balance, status, date FROM deposit WHERE username = ? ORDER BY id DESC LIMIT 50")
         .bind(&query.username)
         .fetch_all(&state.db)
         .await
         .unwrap_or_default();
-        
+
     let data: Vec<serde_json::Value> = rows.into_iter().map(|r| {
+        let did: String = r.try_get::<String, _>("deposit_id").unwrap_or_else(|_| r.try_get::<i64, _>("id").unwrap_or_default().to_string());
         json!({
             "id": r.try_get::<i32, _>("id").unwrap_or_default().to_string(),
+            "deposit_id": did,
             "method": r.try_get::<String, _>("method").unwrap_or_default(),
             "amount": r.try_get::<f64, _>("amount").unwrap_or_default(),
-            "status": r.try_get::<String, _>("status").unwrap_or_default()
+            "fee": r.try_get::<f64, _>("fee").unwrap_or(0.0),
+            "uniq": r.try_get::<f64, _>("balance").unwrap_or(0.0),
+            "status": r.try_get::<String, _>("status").unwrap_or_default(),
+            "date_cr": r.try_get::<String, _>("date").unwrap_or_default()
         })
     }).collect();
-    
+
     Ok(Json(json!({ "result": true, "data": data })))
 }
 
 async fn handle_deposit_create(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Json(payload): Json<DepositRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
+    require_session(&state, &headers, Some(&payload.username)).await?;
     let deposit_id = rust_backend::domain::account::service::create_deposit(&state.db, payload).await?;
-    Ok(Json(json!({ "result": true, "message": "Berhasil membuat deposit", "deposit_id": deposit_id })))
+    Ok(Json(json!({ "result": true, "message": "Berhasil membuat deposit", "deposit_id": deposit_id, "invoice_id": deposit_id })))
 }
 
 async fn handle_admin_create_service(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Json(payload): Json<AdminCreateServiceRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
+    require_admin(&state, &headers).await?;
     admin_create_service(&state.db, payload).await?;
     Ok(Json(json!({ "result": true, "message": "Layanan berhasil ditambahkan" })))
 }
 
 async fn handle_admin_adjust_balance(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Json(payload): Json<AdminUpdateUserBalanceRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
+    require_admin(&state, &headers).await?;
     let new_balance = admin_adjust_user_balance(&state.db, payload).await?;
     Ok(Json(json!({ "result": true, "new_balance": new_balance, "message": "Saldo berhasil disesuaikan" })))
 }
 
 async fn handle_admin_lock_account(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Json(payload): Json<AdminLockAccountRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
+    require_admin(&state, &headers).await?;
     admin_lock_user_account(&state.db, payload).await?;
     Ok(Json(json!({ "result": true, "message": "Akun berhasil dikunci" })))
 }
 
 async fn handle_admin_financial_summary(
     State(state): State<AppState>,
+    headers: HeaderMap,
 ) -> Result<Json<serde_json::Value>, AppError> {
+    require_admin(&state, &headers).await?;
     let summary = admin_get_financial_summary(&state.db).await?;
     Ok(Json(json!({ "result": true, "data": summary })))
 }
 
 async fn handle_admin_list_services(
     State(state): State<AppState>,
+    headers: HeaderMap,
 ) -> Result<Json<serde_json::Value>, AppError> {
+    require_admin(&state, &headers).await?;
     use sqlx::Row;
     let rows = sqlx::query("SELECT * FROM service ORDER BY id DESC LIMIT 200")
         .fetch_all(&state.db)
@@ -1145,7 +1420,9 @@ async fn handle_admin_list_services(
 
 async fn handle_admin_list_transactions(
     State(state): State<AppState>,
+    headers: HeaderMap,
 ) -> Result<Json<serde_json::Value>, AppError> {
+    require_admin(&state, &headers).await?;
     use sqlx::Row;
     let rows = sqlx::query("SELECT * FROM transaction ORDER BY id DESC LIMIT 200")
         .fetch_all(&state.db)
@@ -1175,7 +1452,9 @@ async fn handle_admin_list_transactions(
 
 async fn handle_admin_list_users(
     State(state): State<AppState>,
+    headers: HeaderMap,
 ) -> Result<Json<serde_json::Value>, AppError> {
+    require_admin(&state, &headers).await?;
     use sqlx::Row;
     let rows = sqlx::query("SELECT id, username, name, email, phone, balance, level, date_cr FROM users ORDER BY id DESC LIMIT 200")
         .fetch_all(&state.db)
@@ -1199,6 +1478,54 @@ async fn handle_admin_list_users(
         .collect();
 
     Ok(Json(json!({ "result": true, "data": data })))
+}
+
+// ============================================================
+// SERVER-SIDE SESSION GUARD (parity with PHP library/session)
+// ============================================================
+
+fn bearer_token(headers: &HeaderMap) -> String {
+    headers.get("Authorization")
+        .and_then(|h| h.to_str().ok())
+        .and_then(|v| v.strip_prefix("Bearer "))
+        .unwrap_or("")
+        .to_string()
+}
+
+/// Validates the SESS_ token against users_cookie.
+/// Returns (username, level). When `expected_user` is Some, the session user
+/// must match it unless the session belongs to an Admin.
+async fn require_session(state: &AppState, headers: &HeaderMap, expected_user: Option<&str>) -> Result<(String, String), AppError> {
+    use sqlx::Row;
+    let token = bearer_token(headers);
+    if token.is_empty() {
+        return Err(AppError::InvalidCredentials);
+    }
+    let row = sqlx::query(
+        "SELECT c.username, COALESCE(u.level, 'Member') AS level FROM users_cookie c LEFT JOIN users u ON u.username = c.username WHERE c.cookie = ? AND (c.expired IS NULL OR c.expired > NOW()) LIMIT 1",
+    )
+    .bind(&token)
+    .fetch_optional(&state.db)
+    .await?
+    .ok_or(AppError::InvalidCredentials)?;
+
+    let username: String = row.try_get("username").unwrap_or_default();
+    let level: String = row.try_get("level").unwrap_or_else(|_| "Member".to_string());
+
+    if let Some(expected) = expected_user {
+        if username != expected && level != "Admin" {
+            return Err(AppError::AccountLocked("Akses ditolak.".to_string()));
+        }
+    }
+    Ok((username, level))
+}
+
+async fn require_admin(state: &AppState, headers: &HeaderMap) -> Result<String, AppError> {
+    let (user, level) = require_session(state, headers, None).await?;
+    if level != "Admin" {
+        return Err(AppError::AccountLocked("Akses khusus admin.".to_string()));
+    }
+    Ok(user)
 }
 
 // ============================================================
@@ -1350,43 +1677,152 @@ async fn handle_create_invoice(
     State(state): State<AppState>,
     Json(req): Json<CreateInvoiceRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    let service = sqlx::query_as::<MySql, Service>(
-        "SELECT * FROM service WHERE code = ? AND status = 'available'",
-    )
-    .bind(&req.service_code)
-    .fetch_optional(&state.db)
-    .await?
-    .ok_or(AppError::ServiceNotFound)?;
+    use sqlx::Row;
 
-    let username = req.username.unwrap_or_else(|| "GUEST".to_string());
-    let is_member = username != "GUEST" && username != "-" && !username.is_empty();
-    let profit = if is_member { service.member } else { 0.0 };
-    let total_price = service.price + profit;
-    let order_id = format!("ORD{}{}", chrono::Utc::now().format("%Y%m%d%H%M%S"), rand::random::<u16>());
+    // MODE "existing_order": invoice gateway menempel ke order yang SUDAH ada
+    // (dibuat oleh /api/v1/order/submit) — tanpa duplikasi baris transaksi.
+    let existing: Option<sqlx::mysql::MySqlRow> = match &req.existing_order_id {
+        Some(oid) if !oid.is_empty() => {
+            sqlx::query("SELECT order_id, code, service_name, game, target, user, price, payment_code, status, payment_status FROM transaction WHERE order_id = ? LIMIT 1")
+                .bind(oid)
+                .fetch_optional(&state.db)
+                .await?
+        }
+        _ => None,
+    };
 
-    sqlx::query(
-        "INSERT INTO transaction (order_id, order_tid, user, code, service_name, game, target, price, profit, status, payment_status, provider, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'unpaid', ?, NOW(), NOW())"
-    )
-    .bind(&order_id)
-    .bind(&order_id)
-    .bind(&username)
-    .bind(&service.code)
-    .bind(&service.name)
-    .bind(&service.game)
-    .bind(&req.target)
-    .bind(total_price)
-    .bind(profit)
-    .bind(&service.provider)
-    .execute(&state.db)
-    .await?;
+    // ANTI DOUBLE-INVOICE: order yang sudah dibayar / sedang diproses
+    // tidak boleh dibuatkan tagihan kedua.
+    if let Some(ref row) = existing {
+        let pay_status: String = row.try_get("payment_status").unwrap_or_default();
+        let trx_status: String = row.try_get("status").unwrap_or_default();
+        if pay_status == "paid" || matches!(trx_status.as_str(), "success" | "processing" | "process") {
+            return Ok(Json(json!({
+                "result": false,
+                "message": "Order ini sudah dibayar / sedang diproses — tagihan baru ditolak."
+            })));
+        }
+    }
+
+    let (order_id, total_price, inv_name, inv_game, inv_target): (String, f64, String, String, String) = if let Some(ref row) = existing {
+        (
+            row.try_get::<String, _>("order_id").unwrap_or_default(),
+            row.try_get::<f64, _>("price").unwrap_or(0.0),
+            row.try_get::<String, _>("service_name").unwrap_or_default(),
+            row.try_get::<String, _>("game").unwrap_or_default(),
+            row.try_get::<String, _>("target").unwrap_or_default(),
+        )
+    } else {
+        let service = sqlx::query_as::<MySql, Service>(
+            "SELECT * FROM service WHERE code = ? AND status = 'available'",
+        )
+        .bind(&req.service_code)
+        .fetch_optional(&state.db)
+        .await?
+        .ok_or(AppError::ServiceNotFound)?;
+
+        let username = req.username.clone().unwrap_or_else(|| "GUEST".to_string());
+        let is_member = username != "GUEST" && username != "-" && !username.is_empty();
+        // Margin mengikuti level user (paritas dengan fulfillment)
+        let profit = if is_member {
+            let level: String = sqlx::query_scalar("SELECT COALESCE(level, 'Member') FROM users WHERE username = ? LIMIT 1")
+                .bind(&username)
+                .fetch_optional(&state.db)
+                .await
+                .ok()
+                .flatten()
+                .unwrap_or_else(|| "Member".to_string());
+            if level == "Reseller" || level == "Admin" { service.reseller } else { service.member }
+        } else {
+            0.0
+        };
+        let total_price = service.price + profit;
+        let order_id = format!("ORD{}{}", chrono::Utc::now().format("%Y%m%d%H%M%S"), rand::random::<u16>());
+
+        sqlx::query(
+            "INSERT INTO transaction (order_id, order_tid, user, code, service_name, game, target, price, profit, status, payment_status, provider, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'unpaid', ?, NOW(), NOW())"
+        )
+        .bind(&order_id)
+        .bind(&order_id)
+        .bind(&username)
+        .bind(&service.code)
+        .bind(&service.name)
+        .bind(&service.game)
+        .bind(&req.target)
+        .bind(total_price)
+        .bind(profit)
+        .bind(&service.provider)
+        .execute(&state.db)
+        .await?;
+
+        (order_id, total_price, service.name.clone(), service.game.clone(), req.target.clone())
+    };
+
+    let username = req.username.clone().unwrap_or_else(|| "GUEST".to_string());
+    let voucher_token = req.voucher.as_deref().map(str::trim).filter(|s| !s.is_empty()).unwrap_or("-");
+
+    // MODE AUTO: gateway & channel diambil dari metode yang dipilih user saat submit
+    // (tersimpan di transaction.payment_code). APP/saldo → SALDO.
+    let mut effective_gateway = req.payment_gateway.to_uppercase();
+    let mut effective_channel = req.payment_channel.clone();
+    if effective_gateway == "AUTO" {
+        if let Some(ref row) = existing {
+            let pay_code: String = row.try_get("payment_code").unwrap_or_default();
+            if pay_code.is_empty() {
+                return Ok(Json(json!({ "result": false, "message": "Menunggu konfirmasi pesanan..." })));
+            }
+            let mrow = sqlx::query("SELECT provider, code, type FROM metode WHERE code = ? LIMIT 1")
+                .bind(&pay_code)
+                .fetch_optional(&state.db)
+                .await?
+                .ok_or(AppError::ServiceNotFound)?;
+            let m_provider: String = mrow.try_get("provider").unwrap_or_else(|_| "X".to_string());
+            let m_code: String = mrow.try_get("code").unwrap_or_default();
+            let m_type: String = mrow.try_get("type").unwrap_or_default();
+            if m_provider == "APP" || m_type == "app" {
+                effective_gateway = "SALDO".to_string();
+            } else {
+                effective_gateway = m_provider;
+            }
+            effective_channel = m_code;
+        } else {
+            return Ok(Json(json!({ "result": false, "message": "Order tidak ditemukan" })));
+        }
+    }
 
     let return_url = "https://aruterushoppu.com/order/status";
-    let fulfillment_webhook_url = "http://127.0.0.1:8081/webhook";
+    let public_base = std::env::var("PUBLIC_BASE_URL")
+        .unwrap_or_else(|_| format!("http://127.0.0.1:{}", state.config.server_port));
 
-    let clean_svc_name = service.name.replace(' ', "_").replace(';', "");
-    let msg_text = format!("[NEW_ORDER] {} {} {} {} {} {} {}", order_id, username, req.service_code, req.target, service.provider, total_price, clean_svc_name);
+    let clean_svc_name = inv_name.replace(' ', "_").replace(';', "");
+    // Saat mode existing_order, [NEW_ORDER] sudah dikirim oleh /api/v1/order/submit
+    // (lengkap dengan voucher) — jangan broadcast ganda.
+    let msg_text = format!(
+        "[NEW_ORDER] {} {} {} {} {} {} {} {}",
+        order_id, username, req.service_code, inv_target, "-", total_price, clean_svc_name, voucher_token
+    );
+    let broadcast_new_order = existing.is_none();
 
-    match req.payment_gateway.to_uppercase().as_str() {
+    // Idempotensi: kalau invoice untuk (order, gateway) ini sudah pernah dibuat
+    // dan belum lewat 24 jam → kembalikan TAGIHAN YANG SAMA.
+    let inv_cache_key = format!("{}|{}", order_id, effective_gateway);
+    // Eviksi: buang entri kadaluarsa (>24 jam) saat peta membengkak
+    if INVOICE_CACHE.len() > 10_000 {
+        let now_ts = chrono::Utc::now().timestamp();
+        INVOICE_CACHE.retain(|_, v| now_ts - v.0 < 86_400);
+    }
+    if existing.is_some() {
+        if let Some(kv) = INVOICE_CACHE.get(&inv_cache_key) {
+            let (ts, ref cached) = *kv.value();
+            if chrono::Utc::now().timestamp() - ts < 86_400 {
+                let mut resp = cached.clone();
+                resp["message"] = json!("Invoice sudah ada — menggunakan tagihan yang sama (idempoten).");
+                return Ok(Json(resp));
+            }
+        }
+    }
+
+    match effective_gateway.as_str() {
         "TRIPAY" => {
             let merchant_code = std::env::var("TRIPAY_MERCHANT_CODE").unwrap_or_default();
             let api_key = std::env::var("TRIPAY_API_KEY").unwrap_or_default();
@@ -1396,11 +1832,11 @@ async fn handle_create_invoice(
             let inv = tripay
                 .create_transaction(
                     &state.http_client,
-                    &req.payment_channel,
+                    &effective_channel,
                     &order_id,
                     total_price,
-                    &service.name,
-                    &req.target,
+                    &inv_name,
+                    &inv_target,
                     &req.customer_name,
                     &req.customer_email,
                     &req.customer_phone,
@@ -1408,9 +1844,11 @@ async fn handle_create_invoice(
                 )
                 .await?;
 
-            let _ = rust_backend::domain::telegram::sender::send_report_to_fulfillment(&msg_text).await;
+            if broadcast_new_order {
+                let _ = rust_backend::domain::telegram::sender::send_report_to_fulfillment(&msg_text).await;
+            }
 
-            Ok(Json(json!({
+            let resp = json!({
                 "result": true,
                 "data": {
                     "order_id": order_id,
@@ -1421,22 +1859,24 @@ async fn handle_create_invoice(
                     "amount": inv.amount
                 },
                 "message": "Invoice Tripay berhasil dibuat dengan rincian barang"
-            })))
+            });
+            INVOICE_CACHE.insert(inv_cache_key, (chrono::Utc::now().timestamp(), resp.clone()));
+            return Ok(Json(resp));
         }
         "DUITKU" => {
             let merchant_code = std::env::var("DUITKU_MERCHANT_CODE").unwrap_or_default();
             let api_key = std::env::var("DUITKU_API_KEY").unwrap_or_default();
             let duitku = DuitkuGateway::new(merchant_code, api_key, false);
 
-            let callback_url = format!("{}/duitku", fulfillment_webhook_url);
+            let callback_url = format!("{}/webhook/duitku", public_base);
             let inv = duitku
                 .create_transaction(
                     &state.http_client,
-                    &req.payment_channel,
+                    &effective_channel,
                     &order_id,
                     total_price as u64,
-                    &service.name,
-                    &req.target,
+                    &inv_name,
+                    &inv_target,
                     &req.customer_name,
                     &req.customer_email,
                     &req.customer_phone,
@@ -1445,9 +1885,11 @@ async fn handle_create_invoice(
                 )
                 .await?;
 
-            let _ = rust_backend::domain::telegram::sender::send_report_to_fulfillment(&msg_text).await;
+            if broadcast_new_order {
+                let _ = rust_backend::domain::telegram::sender::send_report_to_fulfillment(&msg_text).await;
+            }
 
-            Ok(Json(json!({
+            let resp = json!({
                 "result": true,
                 "data": {
                     "order_id": order_id,
@@ -1457,7 +1899,9 @@ async fn handle_create_invoice(
                     "amount": total_price
                 },
                 "message": "Invoice Duitku berhasil dibuat dengan rincian barang"
-            })))
+            });
+            INVOICE_CACHE.insert(inv_cache_key, (chrono::Utc::now().timestamp(), resp.clone()));
+            return Ok(Json(resp));
         }
         "TOKOPAY" => {
             let merchant_id = std::env::var("TOKOPAY_MERCHANT_ID").unwrap_or_default();
@@ -1467,12 +1911,12 @@ async fn handle_create_invoice(
             let inv = tokopay
                 .create_transaction(
                     &state.http_client,
-                    &req.payment_channel,
+                    &effective_channel,
                     &order_id,
                     total_price as u64,
-                    &service.game,
-                    &service.name,
-                    &req.target,
+                    &inv_game,
+                    &inv_name,
+                    &inv_target,
                     &req.customer_name,
                     &req.customer_email,
                     &req.customer_phone,
@@ -1480,9 +1924,11 @@ async fn handle_create_invoice(
                 )
                 .await?;
 
-            let _ = rust_backend::domain::telegram::sender::send_report_to_fulfillment(&msg_text).await;
+            if broadcast_new_order {
+                let _ = rust_backend::domain::telegram::sender::send_report_to_fulfillment(&msg_text).await;
+            }
 
-            Ok(Json(json!({
+            let resp = json!({
                 "result": true,
                 "data": {
                     "order_id": order_id,
@@ -1492,7 +1938,9 @@ async fn handle_create_invoice(
                     "amount": total_price
                 },
                 "message": "Invoice Tokopay berhasil dibuat dengan rincian barang"
-            })))
+            });
+            INVOICE_CACHE.insert(inv_cache_key, (chrono::Utc::now().timestamp(), resp.clone()));
+            return Ok(Json(resp));
         }
         "PAYDISINI" => {
             let api_key = std::env::var("PAYDISINI_API_KEY").unwrap_or_default();
@@ -1502,20 +1950,22 @@ async fn handle_create_invoice(
             let inv = paydisini
                 .create_transaction(
                     &state.http_client,
-                    &req.payment_channel,
+                    &effective_channel,
                     &order_id,
                     total_price as u64,
-                    &service.name,
-                    &req.target,
+                    &inv_name,
+                    &inv_target,
                     &req.customer_email,
                     &req.customer_phone,
                     return_url,
                 )
                 .await?;
 
-            let _ = rust_backend::domain::telegram::sender::send_report_to_fulfillment(&msg_text).await;
+            if broadcast_new_order {
+                let _ = rust_backend::domain::telegram::sender::send_report_to_fulfillment(&msg_text).await;
+            }
 
-            Ok(Json(json!({
+            let resp = json!({
                 "result": true,
                 "data": {
                     "order_id": order_id,
@@ -1526,7 +1976,9 @@ async fn handle_create_invoice(
                     "amount": total_price
                 },
                 "message": "Invoice Paydisini berhasil dibuat dengan rincian barang"
-            })))
+            });
+            INVOICE_CACHE.insert(inv_cache_key, (chrono::Utc::now().timestamp(), resp.clone()));
+            return Ok(Json(resp));
         }
         "SALDO" => {
             if username == "GUEST" || username.is_empty() {
@@ -1534,7 +1986,8 @@ async fn handle_create_invoice(
             }
 
             // Web Server purely sends REQ_OTP to Fulfillment. It doesn't generate OTP or check balance itself!
-            let msg = format!("[REQ_OTP] {} {} {} {} {}", order_id, username, service.code, req.target, total_price);
+            // Fulfillment menghitung harga otoritatifnya sendiri (base+margin+flashsale-voucher).
+            let msg = format!("[REQ_OTP] {} {} {} {} {} {}", order_id, username, req.service_code, inv_target, total_price, voucher_token);
             let _ = rust_backend::domain::telegram::sender::send_report_to_fulfillment(&msg).await;
 
             Ok(Json(json!({
@@ -1542,7 +1995,7 @@ async fn handle_create_invoice(
                 "data": {
                     "order_id": order_id,
                     "payment_gateway": "SALDO",
-                    "checkout_url": format!("https://aruterushoppu.com/order/verify-otp?order_id={}", order_id),
+                    "checkout_url": format!("/order/verify-otp?order_id={}", order_id),
                     "amount": total_price
                 },
                 "message": "Permintaan OTP telah dikirim ke WhatsApp Anda"
@@ -2036,13 +2489,71 @@ async fn handle_product(
         }));
     }
 
-    // Reviews: "ulasan" table does not exist in this DB schema
-    let reviews: Vec<serde_json::Value> = Vec::new();
-    let total_review: i64 = 0;
-    let average_rating: f64 = 0.0;
-    let progress: Vec<f64> = vec![0.0, 0.0, 0.0, 0.0, 0.0];
-    let star_counts: Vec<i64> = vec![0, 0, 0, 0, 0];
-    let form_fields: Vec<serde_json::Value> = vec![];
+    // Reviews: read from `ulasan` when the table exists (graceful empty otherwise)
+    let review_rows = sqlx::query(
+        "SELECT username, order_id, rating, message, date_cr FROM ulasan WHERE category = ? ORDER BY id DESC LIMIT 5",
+    )
+    .bind(&code)
+    .fetch_all(&state.db)
+    .await
+    .unwrap_or_default();
+
+    let reviews: Vec<serde_json::Value> = review_rows
+        .iter()
+        .map(|r| {
+            let oid: String = r.try_get("order_id").unwrap_or_default();
+            json!({
+                "user": r.try_get::<String, _>("username").unwrap_or_default(),
+                "order_id": oid,
+                "rating": r.try_get::<i64, _>("rating").unwrap_or_default(),
+                "message": r.try_get::<String, _>("message").unwrap_or_default(),
+                "date_cr": r.try_get::<String, _>("date_cr").unwrap_or_default(),
+            })
+        })
+        .collect();
+
+    let (total_review, average_rating, star_counts) = if sqlx::query("SELECT 1 FROM ulasan LIMIT 1")
+        .fetch_optional(&state.db)
+        .await
+        .map(|r| r.is_some())
+        .unwrap_or(false)
+    {
+        let total: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM ulasan WHERE category = ?")
+            .bind(&code)
+            .fetch_one(&state.db)
+            .await
+            .unwrap_or(0);
+        let avg: f64 = sqlx::query_scalar("SELECT COALESCE(AVG(rating),0) FROM ulasan WHERE category = ?")
+            .bind(&code)
+            .fetch_one(&state.db)
+            .await
+            .unwrap_or(0.0);
+        let mut counts = vec![0i64; 5];
+        for star in 1..=5i64 {
+            counts[(star - 1) as usize] = sqlx::query_scalar("SELECT COUNT(*) FROM ulasan WHERE category = ? AND rating = ?")
+                .bind(&code)
+                .bind(star)
+                .fetch_one(&state.db)
+                .await
+                .unwrap_or(0);
+        }
+        (total, avg, counts)
+    } else {
+        (0i64, 0.0f64, vec![0i64; 5])
+    };
+    let progress: Vec<f64> = if total_review > 0 {
+        star_counts.iter().map(|c| (*c as f64 / total_review as f64) * 100.0).collect()
+    } else {
+        vec![0.0; 5]
+    };
+
+    // Dynamic account form + notes from category row (parity with PHP data_form builder)
+    let data_form_raw: String = cat_row.try_get("data_form").unwrap_or_default();
+    let form_fields: serde_json::Value = serde_json::from_str::<serde_json::Value>(&data_form_raw).unwrap_or(json!([]));
+    let note_b64: String = cat_row.try_get("note").unwrap_or_default();
+    let target_note: String = cat_row.try_get("target_note").unwrap_or_default();
+    let apk_raw: String = cat_row.try_get("apk").unwrap_or_default();
+    let prefix: String = cat_row.try_get("prefix").unwrap_or_default();
 
     Ok(Json(json!({
         "result": true,
@@ -2055,10 +2566,10 @@ async fn handle_product(
             "slug": slugify(&name),
             "image": category_image,
             "banner": category_banner,
-            "note": "",
-            "target_note": "",
-            "apk": false,
-            "prefix": "",
+            "note": try_decode_base64(&note_b64),
+            "target_note": target_note,
+            "apk": apk_raw == "1" || apk_raw.eq_ignore_ascii_case("true"),
+            "prefix": prefix,
             "data_form": form_fields,
             "status": "available",
             "services": services,
@@ -2179,36 +2690,92 @@ async fn handle_review_submit(
     let name: String = trx_row.try_get("service_name").unwrap_or_default();
     let now = chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
 
-    // "ulasan" table does not exist in this DB schema; store review in a
-    // best-effort table if present, otherwise return success without persisting.
+    // Persist into `ulasan` when the table exists (no DDL is ever executed).
     let has_table = sqlx::query("SELECT 1 FROM ulasan LIMIT 1")
         .fetch_optional(&state.db)
         .await
         .map(|r| r.is_some())
         .unwrap_or(false);
 
-    if has_table {
-        sqlx::query("INSERT INTO ulasan (username, order_id, category, name, rating, message, date_cr) VALUES (?, ?, ?, ?, ?, ?, ?)")
-            .bind(&username)
-            .bind(&req.order_id)
-            .bind(&category)
-            .bind(&name)
-            .bind(req.rating)
-            .bind(&req.message)
-            .bind(&now)
-            .execute(&state.db)
-            .await?;
+    if !has_table {
+        return Ok(Json(json!({ "result": false, "message": "Fitur ulasan belum aktif." })));
     }
 
-    Ok(Json(json!({ "result": true, "message": "Terima kasih sudah memberi ulasan." })))
+    // Prevent duplicate review for the same order
+    let already: Option<(i64,)> = sqlx::query_as("SELECT id FROM ulasan WHERE order_id = ? LIMIT 1")
+        .bind(&req.order_id)
+        .fetch_optional(&state.db)
+        .await
+        .unwrap_or(None);
+    if already.is_some() {
+        return Ok(Json(json!({ "result": false, "message": "Anda sudah memberi ulasan untuk pesanan ini." })));
+    }
+
+    let insert = sqlx::query("INSERT INTO ulasan (username, order_id, category, name, rating, message, date_cr) VALUES (?, ?, ?, ?, ?, ?, ?)")
+        .bind(&username)
+        .bind(&req.order_id)
+        .bind(&category)
+        .bind(&name)
+        .bind(req.rating)
+        .bind(&req.message)
+        .bind(&now)
+        .execute(&state.db)
+        .await;
+
+    match insert {
+        Ok(_) => Ok(Json(json!({ "result": true, "message": "Terima kasih sudah memberi ulasan." }))),
+        Err(e) => {
+            tracing::warn!("[REVIEW] insert failed: {}", e);
+            Ok(Json(json!({ "result": false, "message": "Gagal menyimpan ulasan." })))
+        }
+    }
+}
+
+#[derive(Deserialize)]
+pub struct ReviewsQuery {
+    #[serde(default)]
+    pub category: String,
+    #[serde(default)]
+    pub limit: Option<i64>,
+    #[serde(default)]
+    pub offset: Option<i64>,
 }
 
 async fn handle_reviews(
     State(state): State<AppState>,
+    Query(q): Query<ReviewsQuery>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    // "ulasan" table does not exist in this DB schema
-    let _ = &state;
-    Ok(Json(json!({ "result": true, "data": [] })))
+    use sqlx::Row;
+    let limit = q.limit.unwrap_or(20).clamp(1, 100);
+    let offset = q.offset.unwrap_or(0).max(0);
+
+    // Graceful: if the ulasan table doesn't exist yet, return empty list.
+    let rows = sqlx::query(
+        "SELECT id, username, order_id, category, name, rating, message, date_cr FROM ulasan ORDER BY id DESC LIMIT ? OFFSET ?",
+    )
+    .bind(limit)
+    .bind(offset)
+    .fetch_all(&state.db)
+    .await
+    .unwrap_or_default();
+
+    let data: Vec<serde_json::Value> = rows
+        .into_iter()
+        .map(|r| {
+            json!({
+                "id": r.try_get::<i64, _>("id").unwrap_or_default(),
+                "user": r.try_get::<String, _>("username").unwrap_or_default(),
+                "order_id": r.try_get::<String, _>("order_id").unwrap_or_default(),
+                "category": r.try_get::<String, _>("category").unwrap_or_default(),
+                "name": r.try_get::<String, _>("name").unwrap_or_default(),
+                "rating": r.try_get::<i64, _>("rating").unwrap_or_default(),
+                "message": r.try_get::<String, _>("message").unwrap_or_default(),
+                "date_cr": r.try_get::<String, _>("date_cr").unwrap_or_default(),
+            })
+        })
+        .collect();
+
+    Ok(Json(json!({ "result": true, "data": data })))
 }
 
 #[derive(Deserialize)]
@@ -2225,9 +2792,16 @@ pub struct SubmitOrderRequest {
 
 async fn handle_submit_order(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Json(req): Json<SubmitOrderRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     use sqlx::Row;
+
+    // ANTI-SPAM: maksimal 6 order/menit per IP
+    let ip = client_ip_from_headers(&headers);
+    if !rate_limit(&format!("order:{}", ip), 6, 60) {
+        return Ok(Json(json!({ "result": false, "message": "Terlalu banyak pesanan dalam waktu singkat. Tunggu sebentar." })));
+    }
 
     // Service lookup
     let srv_row = sqlx::query("SELECT * FROM service WHERE id = ? AND status = 'available' LIMIT 1")
@@ -2244,10 +2818,21 @@ async fn handle_submit_order(
     let srv_name: String = srv_row.try_get("name").unwrap_or_default();
     let srv_game: String = srv_row.try_get("game").unwrap_or_default();
 
-    // Member vs Guest pricing
+    // Member vs Guest pricing — margin mengikuti LEVEL user (paritas dengan fulfillment)
     let lann_user = req.username.as_deref().unwrap_or("-").to_string();
     let is_member = lann_user != "-" && lann_user != "GUEST" && !lann_user.is_empty();
-    let profit = if is_member { srv_member } else { 0.0 };
+    let profit = if is_member {
+        let level: String = sqlx::query_scalar("SELECT COALESCE(level, 'Member') FROM users WHERE username = ? LIMIT 1")
+            .bind(&lann_user)
+            .fetch_optional(&state.db)
+            .await
+            .ok()
+            .flatten()
+            .unwrap_or_else(|| "Member".to_string());
+        if level == "Reseller" || level == "Admin" { srv_reseller } else { srv_member }
+    } else {
+        0.0
+    };
     let real_price = srv_price + profit;
 
     // Flashsale discount
@@ -2257,12 +2842,52 @@ async fn handle_submit_order(
         .fetch_optional(&state.db)
         .await
         .unwrap_or(None);
-    if let Some(fr) = f_row {
+    if let Some(fr) = &f_row {
         flash_discount = fr.try_get("amount").unwrap_or_default();
     }
 
+    // Voucher (exclusive with flashsale, parity with PHP order-action.php)
+    let mut voucher_discount = 0.0f64;
+    let mut voucher_snapshot = String::new();
+    if let Some(vcode) = req.voucher.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
+        if flash_discount > 0.0 {
+            return Ok(Json(json!({ "result": false, "message": "Voucher tidak bisa digunakan untuk produk flashsale." })));
+        }
+        let v_row = sqlx::query("SELECT * FROM voucher WHERE voucher = ? LIMIT 1")
+            .bind(vcode)
+            .fetch_optional(&state.db)
+            .await
+            .unwrap_or(None);
+        let v = match v_row {
+            Some(v) => v,
+            None => {
+                // ANTI-PROBING: kode salah di submit juga dihitung
+                if !record_failure(&format!("vfail:{}", ip), 5, 600) {
+                    return Ok(Json(json!({ "result": false, "message": "Akses voucher dibatasi sementara karena terlalu banyak kode salah." })));
+                }
+                return Ok(Json(json!({ "result": false, "message": "Kode voucher tidak valid." })));
+            }
+        };
+        use sqlx::Row;
+        let stock: i64 = v.try_get("stock").unwrap_or(0);
+        if stock <= 0 {
+            return Ok(Json(json!({ "result": false, "message": "Stok voucher sudah habis." })));
+        }
+        let v_category: String = v.try_get("code").unwrap_or_default();
+        if !v_category.is_empty() && v_category != srv_game {
+            return Ok(Json(json!({ "result": false, "message": "Voucher tidak berlaku untuk produk ini." })));
+        }
+        let minimum: f64 = v.try_get("minimum").unwrap_or(0.0);
+        let price_before_voucher = (real_price - flash_discount).max(0.0);
+        if minimum > 0.0 && price_before_voucher < minimum {
+            return Ok(Json(json!({ "result": false, "message": format!("Minimum belanja Rp{} untuk memakai voucher ini.", minimum) })));
+        }
+        voucher_discount = v.try_get("discount").unwrap_or(0.0);
+        voucher_snapshot = format!("{}###{}###{}", vcode, voucher_discount, price_before_voucher);
+    }
+
     // Enforce non-negative price (BUG-14)
-    let total_price = (real_price - flash_discount).max(0.0);
+    let total_price = (real_price - flash_discount - voucher_discount).max(0.0);
 
     // Provider check (best-effort; provider table may be empty in this schema)
     let _prov_row = sqlx::query("SELECT * FROM provider WHERE code = ? LIMIT 1")
@@ -2297,8 +2922,39 @@ async fn handle_submit_order(
     .execute(&state.db)
     .await?;
 
-    // Broadcast NEW_ORDER to Topup Server via Encrypted MPSC Queue
-    let msg_text = format!("[NEW_ORDER] {} {} {} {} {}", order_id, lann_user, srv_code, req.target, req.method);
+    // Optional snapshot columns (voucher/nickname/phone) — ignored when absent.
+    // CATATAN: stok voucher TIDAK dipotong di sini — otoritas ada di Server Topup
+    // (fulfillment memotong stok saat order LUNAS, dari DB-nya sendiri).
+    if !voucher_snapshot.is_empty() {
+        let _ = sqlx::query("UPDATE transaction SET voucher = ? WHERE order_id = ?")
+            .bind(&voucher_snapshot)
+            .bind(&order_id)
+            .execute(&state.db)
+            .await;
+    }
+    let _ = sqlx::query("UPDATE transaction SET nickname = ?, phone = ? WHERE order_id = ?")
+        .bind(&req.nickname)
+        .bind(&req.whaphone)
+        .bind(&order_id)
+        .execute(&state.db)
+        .await;
+
+    // Simpan metode pembayaran pilihan user — dipakai invoice/create mode AUTO
+    // setelah order di-ACCEPT fulfillment.
+    let _ = sqlx::query("UPDATE transaction SET payment_code = ? WHERE order_id = ?")
+        .bind(&req.method)
+        .bind(&order_id)
+        .execute(&state.db)
+        .await;
+
+    // Broadcast NEW_ORDER to Topup Server via Encrypted MPSC Queue.
+    // Harga final TETAP dihitung ulang oleh fulfillment dari DB-nya sendiri;
+    // price & name di sini hanya fallback, voucher diteruskan agar validasi otoritatif.
+    let voucher_token = req.voucher.as_deref().map(str::trim).filter(|s| !s.is_empty()).unwrap_or("-");
+    let msg_text = format!(
+        "[NEW_ORDER] {} {} {} {} {} {} {} {}",
+        order_id, lann_user, srv_code, req.target, srv_provider, total_price, srv_name.replace(' ', "_"), voucher_token
+    );
     let _ = rust_backend::domain::telegram::sender::send_report_to_fulfillment(&msg_text).await;
 
     let _ = (srv_reseller,);
@@ -2569,25 +3225,1294 @@ async fn handle_pricelist(
 
 async fn handle_admin_config_website_get(
     State(state): State<AppState>,
+    headers: HeaderMap,
 ) -> Result<Json<serde_json::Value>, AppError> {
+    require_admin(&state, &headers).await?;
     let data = rust_backend::domain::admin::config::get_website_config(&state.db).await?;
     Ok(Json(json!({ "result": true, "data": data })))
 }
 
 async fn handle_admin_config_website_post(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Json(payload): Json<rust_backend::domain::admin::config::AdminConfigWebsiteRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
+    require_admin(&state, &headers).await?;
     rust_backend::domain::admin::config::update_website_config(&state.db, payload).await?;
     Ok(Json(json!({ "result": true, "message": "Konfigurasi website berhasil diperbarui" })))
 }
 
 async fn handle_admin_update_transaction_status(
     State(state): State<AppState>,
-    Json(payload): Json<rust_backend::domain::admin::transaction::AdminUpdateTransactionStatusRequest>,
+    headers: HeaderMap,
+    Json(payload): Json<AdminUpdateTransactionStatusRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    rust_backend::domain::admin::transaction::update_transaction_status(&state.db, payload).await?;
+    require_admin(&state, &headers).await?;
+    update_transaction_status(&state.db, payload).await?;
     Ok(Json(json!({ "result": true, "message": "Status transaksi berhasil diperbarui" })))
+}
+
+async fn handle_admin_update_payment_status(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(payload): Json<AdminUpdatePaymentStatusRequest>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    require_admin(&state, &headers).await?;
+    update_payment_status(&state.db, payload).await?;
+    Ok(Json(json!({ "result": true, "message": "Status pembayaran berhasil diperbarui" })))
+}
+
+async fn handle_admin_update_transaction_note(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(payload): Json<AdminUpdateTransactionNoteRequest>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    require_admin(&state, &headers).await?;
+    update_transaction_note(&state.db, payload).await?;
+    Ok(Json(json!({ "result": true, "message": "Catatan transaksi berhasil diperbarui" })))
+}
+
+// ============================================================
+// ADMIN EXTENDED API (parity with PHP admin panel)
+// ============================================================
+
+#[derive(Deserialize)]
+pub struct AdminServiceUpdateRequest {
+    pub id: i64,
+    #[serde(default)]
+    pub name: String,
+    #[serde(default)]
+    pub price: f64,
+    #[serde(default)]
+    pub member: f64,
+    #[serde(default)]
+    pub reseller: f64,
+    #[serde(default)]
+    pub status: String,
+}
+
+async fn handle_admin_update_service(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(p): Json<AdminServiceUpdateRequest>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    require_admin(&state, &headers).await?;
+    sqlx::query("UPDATE service SET name = ?, price = ?, member = ?, reseller = ?, status = ?, date_up = NOW() WHERE id = ?")
+        .bind(&p.name).bind(p.price).bind(p.member).bind(p.reseller).bind(&p.status).bind(p.id)
+        .execute(&state.db).await?;
+    Ok(Json(json!({ "result": true, "message": "Layanan berhasil diperbarui" })))
+}
+
+#[derive(Deserialize)]
+pub struct AdminIdRequest { pub id: i64 }
+
+async fn handle_admin_delete_service(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(p): Json<AdminIdRequest>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    require_admin(&state, &headers).await?;
+    sqlx::query("DELETE FROM service WHERE id = ?").bind(p.id).execute(&state.db).await?;
+    Ok(Json(json!({ "result": true, "message": "Layanan berhasil dihapus" })))
+}
+
+#[derive(Deserialize)]
+pub struct AdminUnlockRequest { pub username: String }
+
+async fn handle_admin_unlock_account(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(p): Json<AdminUnlockRequest>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    require_admin(&state, &headers).await?;
+    sqlx::query("DELETE FROM users_lock WHERE user = ?").bind(&p.username).execute(&state.db).await?;
+    Ok(Json(json!({ "result": true, "message": "Akun berhasil dibuka" })))
+}
+
+#[derive(Deserialize)]
+pub struct AdminCreateUserRequest {
+    pub username: String,
+    pub password: String,
+    #[serde(default)]
+    pub name: String,
+    #[serde(default)]
+    pub email: String,
+    #[serde(default)]
+    pub phone: String,
+    #[serde(default)]
+    pub level: String,
+    #[serde(default)]
+    pub balance: f64,
+}
+
+async fn handle_admin_create_user(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(p): Json<AdminCreateUserRequest>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    require_admin(&state, &headers).await?;
+    let exists: Option<(i64,)> = sqlx::query_as("SELECT id FROM users WHERE username = ? LIMIT 1")
+        .bind(&p.username).fetch_optional(&state.db).await?;
+    if exists.is_some() {
+        return Ok(Json(json!({ "result": false, "message": "Username sudah terdaftar" })));
+    }
+    let hashed = bcrypt::hash(&p.password, bcrypt::DEFAULT_COST).map_err(|e| AppError::InternalError(e.to_string()))?;
+    let level = if p.level.is_empty() { "Member".to_string() } else { p.level };
+    sqlx::query("INSERT INTO users (username, password, name, email, phone, balance, level, date_cr, date_up) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())")
+        .bind(&p.username).bind(&hashed).bind(&p.name).bind(&p.email).bind(&p.phone)
+        .bind(p.balance).bind(&level)
+        .execute(&state.db).await?;
+    let uid = format!("UID{}", chrono::Utc::now().timestamp_millis());
+    let ukey = format!("KEY{}", rand::random::<u32>());
+    let _ = sqlx::query("INSERT INTO users_api (user, uid, ukey, whitelist, callback) VALUES (?, ?, ?, '*', '')")
+        .bind(&p.username).bind(&uid).bind(&ukey).execute(&state.db).await;
+    Ok(Json(json!({ "result": true, "message": "User berhasil ditambahkan" })))
+}
+
+#[derive(Deserialize)]
+pub struct AdminUpdateUserRequest {
+    pub username: String,
+    #[serde(default)]
+    pub name: Option<String>,
+    #[serde(default)]
+    pub email: Option<String>,
+    #[serde(default)]
+    pub phone: Option<String>,
+    #[serde(default)]
+    pub level: Option<String>,
+    #[serde(default)]
+    pub status: Option<String>,
+    #[serde(default)]
+    pub password: Option<String>,
+}
+
+async fn handle_admin_update_user(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(p): Json<AdminUpdateUserRequest>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    require_admin(&state, &headers).await?;
+    if let Some(v) = &p.name { let _ = sqlx::query("UPDATE users SET name = ? WHERE username = ?").bind(v).bind(&p.username).execute(&state.db).await; }
+    if let Some(v) = &p.email { let _ = sqlx::query("UPDATE users SET email = ? WHERE username = ?").bind(v).bind(&p.username).execute(&state.db).await; }
+    if let Some(v) = &p.phone { let _ = sqlx::query("UPDATE users SET phone = ? WHERE username = ?").bind(v).bind(&p.username).execute(&state.db).await; }
+    if let Some(v) = &p.level { let _ = sqlx::query("UPDATE users SET level = ? WHERE username = ?").bind(v).bind(&p.username).execute(&state.db).await; }
+    if let Some(v) = &p.status { let _ = sqlx::query("UPDATE users SET status = ? WHERE username = ?").bind(v).bind(&p.username).execute(&state.db).await; }
+    if let Some(v) = &p.password {
+        if !v.is_empty() {
+            let hashed = bcrypt::hash(v, bcrypt::DEFAULT_COST).map_err(|e| AppError::InternalError(e.to_string()))?;
+            let _ = sqlx::query("UPDATE users SET password = ? WHERE username = ?").bind(&hashed).bind(&p.username).execute(&state.db).await;
+        }
+    }
+    Ok(Json(json!({ "result": true, "message": "User berhasil diperbarui" })))
+}
+
+async fn handle_admin_locked_users(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<serde_json::Value>, AppError> {
+    require_admin(&state, &headers).await?;
+    use sqlx::Row;
+    let rows = sqlx::query("SELECT user, reason, date_cr FROM users_lock ORDER BY id DESC LIMIT 200")
+        .fetch_all(&state.db).await.unwrap_or_default();
+    let data: Vec<serde_json::Value> = rows.into_iter().map(|r| json!({
+        "user": r.try_get::<String, _>("user").unwrap_or_default(),
+        "reason": r.try_get::<String, _>("reason").unwrap_or_default(),
+        "date_cr": r.try_get::<String, _>("date_cr").unwrap_or_default(),
+    })).collect();
+    Ok(Json(json!({ "result": true, "data": data })))
+}
+
+async fn handle_admin_mutations(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<serde_json::Value>, AppError> {
+    require_admin(&state, &headers).await?;
+    use sqlx::Row;
+    let rows = sqlx::query("SELECT username, type, amount, note, date_cr FROM mutation ORDER BY id DESC LIMIT 200")
+        .fetch_all(&state.db).await.unwrap_or_default();
+    let data: Vec<serde_json::Value> = rows.into_iter().map(|r| json!({
+        "username": r.try_get::<String, _>("username").unwrap_or_default(),
+        "type": r.try_get::<String, _>("type").unwrap_or_else(|_| r.try_get::<String, _>("type_name").unwrap_or_default()),
+        "amount": r.try_get::<f64, _>("amount").unwrap_or_default(),
+        "note": r.try_get::<String, _>("note").unwrap_or_default(),
+        "date_cr": r.try_get::<String, _>("date_cr").unwrap_or_default(),
+    })).collect();
+    Ok(Json(json!({ "result": true, "data": data })))
+}
+
+async fn handle_admin_deposits(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<serde_json::Value>, AppError> {
+    require_admin(&state, &headers).await?;
+    use sqlx::Row;
+    let rows = sqlx::query("SELECT id, deposit_id, username, method, name, amount, fee, balance, status, provider, date FROM deposit ORDER BY id DESC LIMIT 200")
+        .fetch_all(&state.db).await.unwrap_or_default();
+    let data: Vec<serde_json::Value> = rows.into_iter().map(|r| json!({
+        "id": r.try_get::<i64, _>("id").unwrap_or_default(),
+        "deposit_id": r.try_get::<String, _>("deposit_id").unwrap_or_default(),
+        "username": r.try_get::<String, _>("username").unwrap_or_default(),
+        "method": r.try_get::<String, _>("method").unwrap_or_default(),
+        "name": r.try_get::<String, _>("name").unwrap_or_default(),
+        "amount": r.try_get::<f64, _>("amount").unwrap_or_default(),
+        "fee": r.try_get::<f64, _>("fee").unwrap_or(0.0),
+        "uniq": r.try_get::<f64, _>("balance").unwrap_or(0.0),
+        "status": r.try_get::<String, _>("status").unwrap_or_default(),
+        "provider": r.try_get::<String, _>("provider").unwrap_or_default(),
+        "date": r.try_get::<String, _>("date").unwrap_or_default(),
+    })).collect();
+    Ok(Json(json!({ "result": true, "data": data })))
+}
+
+#[derive(Deserialize)]
+pub struct AdminDepositStatusRequest { pub deposit_id: String, pub status: String }
+
+async fn handle_admin_deposit_status(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(p): Json<AdminDepositStatusRequest>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    require_admin(&state, &headers).await?;
+    use sqlx::Row;
+    // Guarded update: only transitions from a non-paid state can credit balance.
+    let res = sqlx::query("UPDATE deposit SET status = ? WHERE deposit_id = ? AND status <> ?")
+        .bind(&p.status).bind(&p.deposit_id).bind(&p.status)
+        .execute(&state.db).await?;
+    if p.status == "paid" && res.rows_affected() > 0 {
+        if let Ok(Some(row)) = sqlx::query("SELECT username, amount, balance FROM deposit WHERE deposit_id = ?")
+            .bind(&p.deposit_id).fetch_optional(&state.db).await
+        {
+            let username: String = row.try_get("username").unwrap_or_default();
+            let amount: f64 = row.try_get("amount").unwrap_or(0.0);
+            let uniq: f64 = row.try_get("balance").unwrap_or(0.0);
+            let credit = amount + uniq;
+            if credit > 0.0 && !username.is_empty() {
+                let _ = sqlx::query("UPDATE users SET balance = balance + ? WHERE username = ?")
+                    .bind(credit).bind(&username).execute(&state.db).await;
+                let _ = sqlx::query("INSERT INTO mutation (username, amount, type, note, date_cr) VALUES (?, ?, '+', ?, NOW())")
+                    .bind(&username).bind(credit).bind(format!("Deposit disetujui manual: {}", p.deposit_id))
+                    .execute(&state.db).await;
+            }
+        }
+    }
+    Ok(Json(json!({ "result": true, "message": "Status deposit diperbarui" })))
+}
+
+// ---------- Vouchers ----------
+
+async fn handle_admin_vouchers(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<serde_json::Value>, AppError> {
+    require_admin(&state, &headers).await?;
+    use sqlx::Row;
+    let rows = sqlx::query("SELECT id, code, voucher, discount, minimum, stock, date_cr FROM voucher ORDER BY id DESC LIMIT 200")
+        .fetch_all(&state.db).await.unwrap_or_default();
+    let data: Vec<serde_json::Value> = rows.into_iter().map(|r| json!({
+        "id": r.try_get::<i64, _>("id").unwrap_or_default(),
+        "category": r.try_get::<String, _>("code").unwrap_or_default(),
+        "code": r.try_get::<String, _>("voucher").unwrap_or_default(),
+        "discount": r.try_get::<f64, _>("discount").unwrap_or_default(),
+        "minimum": r.try_get::<f64, _>("minimum").unwrap_or_default(),
+        "stock": r.try_get::<i64, _>("stock").unwrap_or_default(),
+        "date_cr": r.try_get::<String, _>("date_cr").unwrap_or_default(),
+    })).collect();
+    Ok(Json(json!({ "result": true, "data": data })))
+}
+
+#[derive(Deserialize)]
+pub struct AdminVoucherCreateRequest {
+    pub category: String,
+    pub code: String,
+    pub discount: f64,
+    #[serde(default)]
+    pub minimum: f64,
+    #[serde(default)]
+    pub stock: i64,
+}
+
+async fn handle_admin_voucher_create(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(p): Json<AdminVoucherCreateRequest>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    require_admin(&state, &headers).await?;
+    let res = sqlx::query("INSERT INTO voucher (code, voucher, discount, minimum, stock, date_cr) VALUES (?, ?, ?, ?, ?, NOW())")
+        .bind(&p.category).bind(&p.code).bind(p.discount).bind(p.minimum).bind(p.stock)
+        .execute(&state.db).await;
+    match res {
+        Ok(_) => Ok(Json(json!({ "result": true, "message": "Voucher berhasil dibuat" }))),
+        Err(_) => Ok(Json(json!({ "result": false, "message": "Tabel voucher belum tersedia di database web" }))),
+    }
+}
+
+async fn handle_admin_voucher_delete(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(p): Json<AdminIdRequest>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    require_admin(&state, &headers).await?;
+    sqlx::query("DELETE FROM voucher WHERE id = ?").bind(p.id).execute(&state.db).await?;
+    Ok(Json(json!({ "result": true, "message": "Voucher dihapus" })))
+}
+
+// ---------- Flashsale ----------
+
+async fn handle_admin_flashsale(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<serde_json::Value>, AppError> {
+    require_admin(&state, &headers).await?;
+    use sqlx::Row;
+    let rows = sqlx::query(
+        "SELECT f.id, f.code, f.amount, f.status, COALESCE(s.name, '') AS service_name FROM flashsale f LEFT JOIN service s ON s.code = f.code ORDER BY f.id DESC LIMIT 200",
+    ).fetch_all(&state.db).await.unwrap_or_default();
+    let data: Vec<serde_json::Value> = rows.into_iter().map(|r| json!({
+        "id": r.try_get::<i64, _>("id").unwrap_or_default(),
+        "code": r.try_get::<String, _>("code").unwrap_or_default(),
+        "service_name": r.try_get::<String, _>("service_name").unwrap_or_default(),
+        "amount": r.try_get::<f64, _>("amount").unwrap_or_default(),
+        "status": r.try_get::<String, _>("status").unwrap_or_default(),
+    })).collect();
+    Ok(Json(json!({ "result": true, "data": data })))
+}
+
+#[derive(Deserialize)]
+pub struct AdminFlashsaleCreateRequest { pub code: String, pub amount: f64 }
+
+async fn handle_admin_flashsale_create(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(p): Json<AdminFlashsaleCreateRequest>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    require_admin(&state, &headers).await?;
+    sqlx::query("INSERT INTO flashsale (code, amount, status) VALUES (?, ?, '1')")
+        .bind(&p.code).bind(p.amount).execute(&state.db).await?;
+    Ok(Json(json!({ "result": true, "message": "Flashsale ditambahkan" })))
+}
+
+async fn handle_admin_flashsale_toggle(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(p): Json<AdminIdRequest>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    require_admin(&state, &headers).await?;
+    sqlx::query("UPDATE flashsale SET status = IF(status = '1', '0', '1') WHERE id = ?")
+        .bind(p.id).execute(&state.db).await?;
+    Ok(Json(json!({ "result": true, "message": "Status flashsale diubah" })))
+}
+
+async fn handle_admin_flashsale_delete(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(p): Json<AdminIdRequest>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    require_admin(&state, &headers).await?;
+    sqlx::query("DELETE FROM flashsale WHERE id = ?").bind(p.id).execute(&state.db).await?;
+    Ok(Json(json!({ "result": true, "message": "Flashsale dihapus" })))
+}
+
+// ---------- Banners ----------
+
+async fn handle_admin_banners(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<serde_json::Value>, AppError> {
+    require_admin(&state, &headers).await?;
+    use sqlx::Row;
+    let rows = sqlx::query("SELECT id, content FROM banner ORDER BY id DESC LIMIT 100")
+        .fetch_all(&state.db).await.unwrap_or_default();
+    let data: Vec<serde_json::Value> = rows.into_iter().map(|r| json!({
+        "id": r.try_get::<i64, _>("id").unwrap_or_default(),
+        "content": r.try_get::<String, _>("content").unwrap_or_default(),
+    })).collect();
+    Ok(Json(json!({ "result": true, "data": data })))
+}
+
+#[derive(Deserialize)]
+pub struct AdminBannerCreateRequest { pub content: String }
+
+async fn handle_admin_banner_create(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(p): Json<AdminBannerCreateRequest>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    require_admin(&state, &headers).await?;
+    sqlx::query("INSERT INTO banner (content) VALUES (?)").bind(&p.content).execute(&state.db).await?;
+    Ok(Json(json!({ "result": true, "message": "Banner ditambahkan" })))
+}
+
+async fn handle_admin_banner_delete(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(p): Json<AdminIdRequest>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    require_admin(&state, &headers).await?;
+    sqlx::query("DELETE FROM banner WHERE id = ?").bind(p.id).execute(&state.db).await?;
+    Ok(Json(json!({ "result": true, "message": "Banner dihapus" })))
+}
+
+// ---------- Blog ----------
+
+async fn handle_admin_blog_list(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<serde_json::Value>, AppError> {
+    require_admin(&state, &headers).await?;
+    use sqlx::Row;
+    let rows = sqlx::query("SELECT * FROM blog ORDER BY id DESC LIMIT 100")
+        .fetch_all(&state.db).await.unwrap_or_default();
+    let data: Vec<serde_json::Value> = rows.into_iter().map(|r| {
+        let content_raw: String = r.try_get("content").unwrap_or_default();
+        json!({
+            "id": r.try_get::<i64, _>("id").unwrap_or_default(),
+            "title": r.try_get::<String, _>("title").unwrap_or_default(),
+            "banner": r.try_get::<String, _>("banner").unwrap_or_default(),
+            "content": try_decode_base64(&content_raw),
+        })
+    }).collect();
+    Ok(Json(json!({ "result": true, "data": data })))
+}
+
+#[derive(Deserialize)]
+pub struct AdminBlogSaveRequest {
+    #[serde(default)]
+    pub id: Option<i64>,
+    pub title: String,
+    #[serde(default)]
+    pub banner: String,
+    pub content: String,
+}
+
+async fn handle_admin_blog_save(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(p): Json<AdminBlogSaveRequest>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    require_admin(&state, &headers).await?;
+    use base64::Engine;
+    let encoded = base64::engine::general_purpose::STANDARD.encode(p.content.as_bytes());
+    if let Some(id) = p.id {
+        sqlx::query("UPDATE blog SET title = ?, banner = ?, content = ? WHERE id = ?")
+            .bind(&p.title).bind(&p.banner).bind(&encoded).bind(id).execute(&state.db).await?;
+        Ok(Json(json!({ "result": true, "message": "Artikel diperbarui" })))
+    } else {
+        sqlx::query("INSERT INTO blog (title, banner, content) VALUES (?, ?, ?)")
+            .bind(&p.title).bind(&p.banner).bind(&encoded).execute(&state.db).await?;
+        Ok(Json(json!({ "result": true, "message": "Artikel ditambahkan" })))
+    }
+}
+
+async fn handle_admin_blog_delete(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(p): Json<AdminIdRequest>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    require_admin(&state, &headers).await?;
+    sqlx::query("DELETE FROM blog WHERE id = ?").bind(p.id).execute(&state.db).await?;
+    Ok(Json(json!({ "result": true, "message": "Artikel dihapus" })))
+}
+
+// ---------- Providers ----------
+
+async fn handle_admin_providers(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<serde_json::Value>, AppError> {
+    require_admin(&state, &headers).await?;
+    use sqlx::Row;
+    let rows = sqlx::query("SELECT * FROM provider ORDER BY id ASC")
+        .fetch_all(&state.db).await.unwrap_or_default();
+    let data: Vec<serde_json::Value> = rows.into_iter().map(|r| json!({
+        "id": r.try_get::<i64, _>("id").unwrap_or_default(),
+        "code": r.try_get::<String, _>("code").unwrap_or_default(),
+        "name": r.try_get::<String, _>("name").unwrap_or_default(),
+        "userid": r.try_get::<String, _>("userid").unwrap_or_default(),
+        "apikey": r.try_get::<String, _>("apikey").unwrap_or_default(),
+        "merchant": r.try_get::<String, _>("merchant").unwrap_or_default(),
+        "link": r.try_get::<String, _>("link").unwrap_or_default(),
+        "mode": r.try_get::<String, _>("mode").unwrap_or_default(),
+    })).collect();
+    Ok(Json(json!({ "result": true, "data": data })))
+}
+
+#[derive(Deserialize)]
+pub struct AdminProviderEditRequest {
+    pub code: String,
+    #[serde(default)]
+    pub userid: Option<String>,
+    #[serde(default)]
+    pub apikey: Option<String>,
+    #[serde(default)]
+    pub merchant: Option<String>,
+    #[serde(default)]
+    pub link: Option<String>,
+    #[serde(default)]
+    pub mode: Option<String>,
+}
+
+async fn handle_admin_provider_edit(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(p): Json<AdminProviderEditRequest>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    require_admin(&state, &headers).await?;
+    if let Some(v) = &p.userid { let _ = sqlx::query("UPDATE provider SET userid = ? WHERE code = ?").bind(v).bind(&p.code).execute(&state.db).await; }
+    if let Some(v) = &p.apikey { let _ = sqlx::query("UPDATE provider SET apikey = ? WHERE code = ?").bind(v).bind(&p.code).execute(&state.db).await; }
+    if let Some(v) = &p.merchant { let _ = sqlx::query("UPDATE provider SET merchant = ? WHERE code = ?").bind(v).bind(&p.code).execute(&state.db).await; }
+    if let Some(v) = &p.link { let _ = sqlx::query("UPDATE provider SET link = ? WHERE code = ?").bind(v).bind(&p.code).execute(&state.db).await; }
+    if let Some(v) = &p.mode { let _ = sqlx::query("UPDATE provider SET mode = ? WHERE code = ?").bind(v).bind(&p.code).execute(&state.db).await; }
+    Ok(Json(json!({ "result": true, "message": "Provider diperbarui" })))
+}
+
+// ---------- Categories & Tabs ----------
+
+async fn handle_admin_categories(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<serde_json::Value>, AppError> {
+    require_admin(&state, &headers).await?;
+    use sqlx::Row;
+    let rows = sqlx::query("SELECT * FROM category ORDER BY name ASC")
+        .fetch_all(&state.db).await.unwrap_or_default();
+    let data: Vec<serde_json::Value> = rows.into_iter().map(|r| {
+        let df: String = r.try_get("data_form").unwrap_or_default();
+        json!({
+            "id": r.try_get::<i64, _>("id").unwrap_or_default(),
+            "name": r.try_get::<String, _>("name").unwrap_or_default(),
+            "owner": r.try_get::<String, _>("owner").unwrap_or_default(),
+            "type": r.try_get::<String, _>("type").unwrap_or_default(),
+            "image": r.try_get::<String, _>("image").unwrap_or_default(),
+            "popular": r.try_get::<String, _>("popular").unwrap_or_default(),
+            "prefix": r.try_get::<String, _>("prefix").unwrap_or_default(),
+            "data_form": serde_json::from_str::<serde_json::Value>(&df).unwrap_or(json!([])),
+            "note": r.try_get::<String, _>("note").unwrap_or_default(),
+            "target_note": r.try_get::<String, _>("target_note").unwrap_or_default(),
+            "apk": r.try_get::<String, _>("apk").unwrap_or_default(),
+        })
+    }).collect();
+    Ok(Json(json!({ "result": true, "data": data })))
+}
+
+#[derive(Deserialize)]
+pub struct AdminCategorySaveRequest {
+    #[serde(default)]
+    pub id: Option<i64>,
+    pub name: String,
+    #[serde(default)]
+    pub owner: String,
+    #[serde(default)]
+    pub category_type: String,
+    #[serde(default)]
+    pub image: String,
+    #[serde(default)]
+    pub popular: String,
+    #[serde(default)]
+    pub prefix: String,
+    #[serde(default)]
+    pub data_form: Option<serde_json::Value>,
+    #[serde(default)]
+    pub note: String,
+    #[serde(default)]
+    pub target_note: String,
+    #[serde(default)]
+    pub apk: String,
+}
+
+async fn handle_admin_category_save(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(p): Json<AdminCategorySaveRequest>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    require_admin(&state, &headers).await?;
+    let df = p.data_form.clone().map(|v| v.to_string()).unwrap_or_default();
+    if let Some(id) = p.id {
+        sqlx::query("UPDATE category SET name = ?, owner = ?, type = ?, image = ?, popular = ?, prefix = ?, data_form = ?, note = ?, target_note = ?, apk = ? WHERE id = ?")
+            .bind(&p.name).bind(&p.owner).bind(&p.category_type).bind(&p.image).bind(&p.popular)
+            .bind(&p.prefix).bind(&df).bind(&p.note).bind(&p.target_note).bind(&p.apk).bind(id)
+            .execute(&state.db).await?;
+        Ok(Json(json!({ "result": true, "message": "Kategori diperbarui" })))
+    } else {
+        sqlx::query("INSERT INTO category (name, owner, type, image, popular, prefix, data_form, note, target_note, apk) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+            .bind(&p.name).bind(&p.owner).bind(&p.category_type).bind(&p.image).bind(&p.popular)
+            .bind(&p.prefix).bind(&df).bind(&p.note).bind(&p.target_note).bind(&p.apk)
+            .execute(&state.db).await?;
+        Ok(Json(json!({ "result": true, "message": "Kategori ditambahkan" })))
+    }
+}
+
+async fn handle_admin_category_delete(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(p): Json<AdminIdRequest>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    require_admin(&state, &headers).await?;
+    let name: Option<String> = sqlx::query_scalar("SELECT name FROM category WHERE id = ?")
+        .bind(p.id).fetch_optional(&state.db).await.unwrap_or(None);
+    sqlx::query("DELETE FROM category WHERE id = ?").bind(p.id).execute(&state.db).await?;
+    if let Some(n) = name {
+        let _ = sqlx::query("DELETE FROM service WHERE game = ?").bind(&n).execute(&state.db).await;
+    }
+    Ok(Json(json!({ "result": true, "message": "Kategori dihapus beserta layanannya" })))
+}
+
+async fn handle_admin_tabs(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<serde_json::Value>, AppError> {
+    require_admin(&state, &headers).await?;
+    use sqlx::Row;
+    let rows = sqlx::query("SELECT id, name, icon, type, `order` FROM tabs ORDER BY `order` ASC")
+        .fetch_all(&state.db).await.unwrap_or_default();
+    let data: Vec<serde_json::Value> = rows.into_iter().map(|r| json!({
+        "id": r.try_get::<i64, _>("id").unwrap_or_default(),
+        "name": r.try_get::<String, _>("name").unwrap_or_default(),
+        "icon": r.try_get::<String, _>("icon").unwrap_or_default(),
+        "type": r.try_get::<String, _>("type").unwrap_or_default(),
+        "order": r.try_get::<i64, _>("order").unwrap_or_default(),
+    })).collect();
+    Ok(Json(json!({ "result": true, "data": data })))
+}
+
+#[derive(Deserialize)]
+pub struct AdminTabSaveRequest {
+    #[serde(default)]
+    pub id: Option<i64>,
+    pub name: String,
+    #[serde(default)]
+    pub icon: String,
+    #[serde(default)]
+    pub tab_type: String,
+    #[serde(default)]
+    pub order: i64,
+}
+
+async fn handle_admin_tab_save(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(p): Json<AdminTabSaveRequest>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    require_admin(&state, &headers).await?;
+    if let Some(id) = p.id {
+        sqlx::query("UPDATE tabs SET name = ?, icon = ?, type = ?, `order` = ? WHERE id = ?")
+            .bind(&p.name).bind(&p.icon).bind(&p.tab_type).bind(p.order).bind(id)
+            .execute(&state.db).await?;
+        Ok(Json(json!({ "result": true, "message": "Tab diperbarui" })))
+    } else {
+        sqlx::query("INSERT INTO tabs (name, icon, type, `order`) VALUES (?, ?, ?, ?)")
+            .bind(&p.name).bind(&p.icon).bind(&p.tab_type).bind(p.order)
+            .execute(&state.db).await?;
+        Ok(Json(json!({ "result": true, "message": "Tab ditambahkan" })))
+    }
+}
+
+async fn handle_admin_tab_delete(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(p): Json<AdminIdRequest>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    require_admin(&state, &headers).await?;
+    sqlx::query("DELETE FROM tabs WHERE id = ?").bind(p.id).execute(&state.db).await?;
+    Ok(Json(json!({ "result": true, "message": "Tab dihapus" })))
+}
+
+// ---------- Conf-based config (popup / social / colors / pages) ----------
+
+async fn conf_upsert(db: &sqlx::MySqlPool, code: &str, values: [&str; 5]) -> Result<(), AppError> {
+    sqlx::query(
+        "INSERT INTO conf (code, c1, c2, c3, c4, c5) VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE c1 = VALUES(c1), c2 = VALUES(c2), c3 = VALUES(c3), c4 = VALUES(c4), c5 = VALUES(c5)",
+    )
+    .bind(code).bind(values[0]).bind(values[1]).bind(values[2]).bind(values[3]).bind(values[4])
+    .execute(db).await?;
+    Ok(())
+}
+
+async fn handle_admin_conf_get(state: AppState, headers: HeaderMap, code: &'static str) -> Result<Json<serde_json::Value>, AppError> {
+    require_admin(&state, &headers).await?;
+    let rows = sqlx::query(r#"SELECT code, c1, c2, c3, c4, c5 FROM conf"#).fetch_all(&state.db).await.unwrap_or_default();
+    Ok(Json(json!({
+        "c1": conf_cell(&rows, code, "c1"),
+        "c2": conf_cell(&rows, code, "c2"),
+        "c3": conf_cell(&rows, code, "c3"),
+        "c4": conf_cell(&rows, code, "c4"),
+        "c5": conf_cell(&rows, code, "c5"),
+    })))
+}
+
+async fn handle_admin_conf_popup_post(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(p): Json<serde_json::Value>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let _ = require_admin(&state, &headers).await;
+    let g = |k: &str| p.get(k).and_then(|v| v.as_str()).unwrap_or("").to_string();
+    conf_upsert(&state.db, "popup", [&g("image"), &g("subtitle"), &g("content"), &g("show"), ""]).await?;
+    Ok(Json(json!({ "result": true, "message": "Popup disimpan" })))
+}
+
+async fn handle_admin_conf_social_post(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(p): Json<serde_json::Value>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let _ = require_admin(&state, &headers).await;
+    let g = |k: &str| p.get(k).and_then(|v| v.as_str()).unwrap_or("").to_string();
+    conf_upsert(&state.db, "social", [&g("c1"), &g("c2"), &g("c3"), &g("c4"), &g("c5")]).await?;
+    Ok(Json(json!({ "result": true, "message": "Social links disimpan" })))
+}
+
+async fn handle_admin_conf_colors_post(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(p): Json<serde_json::Value>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let _ = require_admin(&state, &headers).await;
+    let g = |k: &str| p.get(k).and_then(|v| v.as_str()).unwrap_or("").to_string();
+    conf_upsert(&state.db, "color", [&g("c1"), &g("c2"), &g("c3"), &g("c4"), ""]).await?;
+    Ok(Json(json!({ "result": true, "message": "Warna tema disimpan" })))
+}
+
+async fn handle_admin_conf_pages_get(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<serde_json::Value>, AppError> {
+    require_admin(&state, &headers).await?;
+    let rows = sqlx::query(r#"SELECT code, c1, c2 FROM conf"#).fetch_all(&state.db).await.unwrap_or_default();
+    Ok(Json(json!({
+        "terms": try_decode_base64(&conf_cell(&rows, "pages", "c1")),
+        "privacy": try_decode_base64(&conf_cell(&rows, "pages", "c2")),
+    })))
+}
+
+async fn handle_admin_conf_pages_post(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(p): Json<serde_json::Value>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let _ = require_admin(&state, &headers).await;
+    use base64::Engine;
+    let terms_b64 = base64::engine::general_purpose::STANDARD.encode(p.get("terms").and_then(|v| v.as_str()).unwrap_or("").as_bytes());
+    let privacy_b64 = base64::engine::general_purpose::STANDARD.encode(p.get("privacy").and_then(|v| v.as_str()).unwrap_or("").as_bytes());
+    conf_upsert(&state.db, "pages", [&terms_b64, &privacy_b64, "", "", ""]).await?;
+    Ok(Json(json!({ "result": true, "message": "Halaman legal disimpan" })))
+}
+
+async fn handle_admin_conf_social_get(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<serde_json::Value>, AppError> {
+    handle_admin_conf_get(state, headers, "social").await
+}
+async fn handle_admin_conf_colors_get(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<serde_json::Value>, AppError> {
+    handle_admin_conf_get(state, headers, "color").await
+}
+async fn handle_admin_conf_popup_get_only(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<serde_json::Value>, AppError> {
+    handle_admin_conf_get(state, headers, "popup").await
+}
+
+// ---------- Reports ----------
+
+#[derive(Deserialize)]
+pub struct ReportRangeQuery {
+    #[serde(default)]
+    pub from: String,
+    #[serde(default)]
+    pub to: String,
+}
+
+fn report_range(q: &ReportRangeQuery) -> (String, String) {
+    let to = if q.to.is_empty() { chrono::Local::now().format("%Y-%m-%d").to_string() } else { q.to.clone() };
+    let from = if q.from.is_empty() { chrono::Local::now().checked_sub_signed(chrono::Duration::days(30)).unwrap_or_else(chrono::Local::now).format("%Y-%m-%d").to_string() } else { q.from.clone() };
+    (from, to)
+}
+
+async fn handle_admin_report_sales(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Query(q): Query<ReportRangeQuery>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    require_admin(&state, &headers).await?;
+    use sqlx::Row;
+    let (from, to) = report_range(&q);
+    let rows = sqlx::query(
+        "SELECT DATE(created_at) AS d, COUNT(*) AS trx, COALESCE(SUM(price),0) AS income, COALESCE(SUM(profit),0) AS profit FROM transaction WHERE status = 'success' AND DATE(created_at) BETWEEN ? AND ? GROUP BY DATE(created_at) ORDER BY d ASC",
+    ).bind(&from).bind(&to).fetch_all(&state.db).await.unwrap_or_default();
+    let series: Vec<serde_json::Value> = rows.into_iter().map(|r| json!({
+        "date": r.try_get::<chrono::NaiveDate, _>("d").map(|d| d.format("%Y-%m-%d").to_string()).unwrap_or_default(),
+        "trx": r.try_get::<i64, _>("trx").unwrap_or_default(),
+        "income": r.try_get::<f64, _>("income").unwrap_or_default(),
+        "profit": r.try_get::<f64, _>("profit").unwrap_or_default(),
+    })).collect();
+    Ok(Json(json!({ "result": true, "from": from, "to": to, "data": series })))
+}
+
+async fn handle_admin_report_profit(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Query(q): Query<ReportRangeQuery>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    require_admin(&state, &headers).await?;
+    use sqlx::Row;
+    let (from, to) = report_range(&q);
+    let rows = sqlx::query(
+        "SELECT provider, COUNT(*) AS trx, COALESCE(SUM(price),0) AS gross, COALESCE(SUM(profit),0) AS profit FROM transaction WHERE status = 'success' AND DATE(created_at) BETWEEN ? AND ? GROUP BY provider ORDER BY profit DESC",
+    ).bind(&from).bind(&to).fetch_all(&state.db).await.unwrap_or_default();
+    let data: Vec<serde_json::Value> = rows.into_iter().map(|r| json!({
+        "provider": r.try_get::<String, _>("provider").unwrap_or_default(),
+        "trx": r.try_get::<i64, _>("trx").unwrap_or_default(),
+        "gross": r.try_get::<f64, _>("gross").unwrap_or_default(),
+        "profit": r.try_get::<f64, _>("profit").unwrap_or_default(),
+    })).collect();
+    Ok(Json(json!({ "result": true, "from": from, "to": to, "data": data })))
+}
+
+async fn handle_admin_report_summary(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Query(q): Query<ReportRangeQuery>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    require_admin(&state, &headers).await?;
+    use sqlx::Row;
+    let (from, to) = report_range(&q);
+    let by_status = sqlx::query(
+        "SELECT status, COUNT(*) AS trx, COALESCE(SUM(price),0) AS total FROM transaction WHERE DATE(created_at) BETWEEN ? AND ? GROUP BY status",
+    ).bind(&from).bind(&to).fetch_all(&state.db).await.unwrap_or_default();
+    let by_user = sqlx::query(
+        "SELECT user, COUNT(*) AS trx, COALESCE(SUM(price),0) AS total FROM transaction WHERE status = 'success' AND DATE(created_at) BETWEEN ? AND ? GROUP BY user ORDER BY total DESC LIMIT 10",
+    ).bind(&from).bind(&to).fetch_all(&state.db).await.unwrap_or_default();
+    let map_rows = |rows: Vec<sqlx::mysql::MySqlRow>, label: &str| -> Vec<serde_json::Value> {
+        rows.into_iter().map(|r| json!({
+            label: r.try_get::<String, _>(label).unwrap_or_default(),
+            "trx": r.try_get::<i64, _>("trx").unwrap_or_default(),
+            "total": r.try_get::<f64, _>("total").unwrap_or_default(),
+        })).collect()
+    };
+    Ok(Json(json!({
+        "result": true, "from": from, "to": to,
+        "by_status": map_rows(by_status, "status"),
+        "by_user": map_rows(by_user, "user"),
+    })))
+}
+
+// ---------- Server tools ----------
+
+async fn handle_admin_error_logs(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<serde_json::Value>, AppError> {
+    require_admin(&state, &headers).await?;
+    use sqlx::Row;
+    let rows = sqlx::query("SELECT id, type, text, ip, date FROM logs WHERE user = 'system' ORDER BY id DESC LIMIT 200")
+        .fetch_all(&state.db).await.unwrap_or_default();
+    let data: Vec<serde_json::Value> = rows.into_iter().map(|r| json!({
+        "id": r.try_get::<i64, _>("id").unwrap_or_default(),
+        "type": r.try_get::<String, _>("type").unwrap_or_default(),
+        "text": r.try_get::<String, _>("text").unwrap_or_default(),
+        "ip": r.try_get::<String, _>("ip").unwrap_or_default(),
+        "date": r.try_get::<String, _>("date").unwrap_or_default(),
+    })).collect();
+    Ok(Json(json!({ "result": true, "data": data })))
+}
+
+async fn handle_admin_dashboard_stats(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<serde_json::Value>, AppError> {
+    require_admin(&state, &headers).await?;
+    async fn scalar(db: &sqlx::MySqlPool, q: &str) -> i64 {
+        sqlx::query_scalar::<MySql, i64>(q).fetch_one(db).await.unwrap_or(0)
+    }
+    async fn fscalar(db: &sqlx::MySqlPool, q: &str) -> f64 {
+        sqlx::query_scalar::<MySql, f64>(q).fetch_one(db).await.unwrap_or(0.0)
+    }
+
+    let total_users = scalar(&state.db, "SELECT COUNT(*) FROM users").await;
+    let total_balance = fscalar(&state.db, "SELECT COALESCE(SUM(balance),0) FROM users").await;
+    let total_deposit_amount = fscalar(&state.db, "SELECT COALESCE(SUM(amount),0) FROM deposit WHERE status = 'paid'").await;
+    let total_trx = scalar(&state.db, "SELECT COUNT(*) FROM transaction").await;
+    let success_trx = scalar(&state.db, "SELECT COUNT(*) FROM transaction WHERE status = 'success'").await;
+    let pending_trx = scalar(&state.db, "SELECT COUNT(*) FROM transaction WHERE status IN ('pending','process')").await;
+    let error_trx = scalar(&state.db, "SELECT COUNT(*) FROM transaction WHERE status IN ('error','system')").await;
+    let revenue_total = fscalar(&state.db, "SELECT COALESCE(SUM(price),0) FROM transaction WHERE status = 'success'").await;
+    let profit_total = fscalar(&state.db, "SELECT COALESCE(SUM(profit),0) FROM transaction WHERE status = 'success'").await;
+    let revenue_today = fscalar(&state.db, "SELECT COALESCE(SUM(price),0) FROM transaction WHERE status = 'success' AND DATE(created_at) = CURDATE()").await;
+    let revenue_month = fscalar(&state.db, "SELECT COALESCE(SUM(price),0) FROM transaction WHERE status = 'success' AND MONTH(created_at) = MONTH(CURDATE()) AND YEAR(created_at) = YEAR(CURDATE())").await;
+
+    // 7-day chart series
+    async fn daily_series(db: &sqlx::MySqlPool, sql: &str) -> Vec<serde_json::Value> {
+        use sqlx::Row;
+        let rows = sqlx::query(sql).fetch_all(db).await.unwrap_or_default();
+        rows.into_iter().map(|r| json!({
+            "date": r.try_get::<chrono::NaiveDate, _>("d").map(|d| d.format("%Y-%m-%d").to_string()).unwrap_or_default(),
+            "value": r.try_get::<i64, _>("c").unwrap_or_default(),
+        })).collect()
+    }
+    let orders_series = daily_series(&state.db, "SELECT DATE(created_at) AS d, COUNT(*) AS c FROM transaction WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) GROUP BY d ORDER BY d").await;
+    let deposits_series = daily_series(&state.db, "SELECT DATE(date) AS d, COUNT(*) AS c FROM deposit WHERE date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) GROUP BY d ORDER BY d").await;
+    let users_series = daily_series(&state.db, "SELECT DATE(date_cr) AS d, COUNT(*) AS c FROM users WHERE date_cr >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) GROUP BY d ORDER BY d").await;
+
+    Ok(Json(json!({
+        "result": true,
+        "data": {
+            "total_users": total_users,
+            "total_balance": total_balance,
+            "total_deposit_amount": total_deposit_amount,
+            "total_trx": total_trx,
+            "success_trx": success_trx,
+            "pending_trx": pending_trx,
+            "error_trx": error_trx,
+            "revenue_total": revenue_total,
+            "profit_total": profit_total,
+            "revenue_today": revenue_today,
+            "revenue_month": revenue_month,
+            "orders_series": orders_series,
+            "deposits_series": deposits_series,
+            "users_series": users_series,
+        }
+    })))
+}
+
+// ---------- Manual orders (provider X) ----------
+
+async fn handle_admin_manual_orders(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<serde_json::Value>, AppError> {
+    require_admin(&state, &headers).await?;
+    use sqlx::Row;
+    let rows = sqlx::query("SELECT order_id, user, service_name, target, price, status, payment_status, note, created_at FROM transaction WHERE provider = 'X' ORDER BY id DESC LIMIT 100")
+        .fetch_all(&state.db).await.unwrap_or_default();
+    let data: Vec<serde_json::Value> = rows.into_iter().map(|r| {
+        let created: Option<chrono::NaiveDateTime> = r.try_get("created_at").unwrap_or(None);
+        json!({
+            "order_id": r.try_get::<String, _>("order_id").unwrap_or_default(),
+            "user": r.try_get::<String, _>("user").unwrap_or_default(),
+            "service_name": r.try_get::<String, _>("service_name").unwrap_or_default(),
+            "target": r.try_get::<String, _>("target").unwrap_or_default(),
+            "price": r.try_get::<f64, _>("price").unwrap_or_default(),
+            "status": r.try_get::<String, _>("status").unwrap_or_default(),
+            "payment_status": r.try_get::<String, _>("payment_status").unwrap_or_default(),
+            "note": r.try_get::<String, _>("note").unwrap_or_default(),
+            "created_at": created.map(|d| d.format("%Y-%m-%d %H:%M:%S").to_string()).unwrap_or_default(),
+        })
+    }).collect();
+    Ok(Json(json!({ "result": true, "data": data })))
+}
+
+#[derive(Deserialize)]
+pub struct AdminManualResendRequest { pub order_id: String }
+
+async fn handle_admin_manual_resend(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(p): Json<AdminManualResendRequest>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    require_admin(&state, &headers).await?;
+    use sqlx::Row;
+    let row = sqlx::query("SELECT user, service_name, price, status FROM transaction WHERE order_id = ? LIMIT 1")
+        .bind(&p.order_id).fetch_optional(&state.db).await?
+        .ok_or(AppError::ServiceNotFound)?;
+    let user: String = row.try_get("user").unwrap_or_default();
+    let svc: String = row.try_get("service_name").unwrap_or_default();
+    let price: f64 = row.try_get("price").unwrap_or_default();
+    let status: String = row.try_get("status").unwrap_or_default();
+
+    let phone: Option<String> = sqlx::query_scalar("SELECT phone FROM users WHERE username = ? LIMIT 1")
+        .bind(&user).fetch_optional(&state.db).await.unwrap_or(None);
+
+    let mut sent = false;
+    if let Some(phone) = phone {
+        if !phone.is_empty() {
+            let api_key = std::env::var("MPWA_API_KEY").unwrap_or_default();
+            let sender = std::env::var("MPWA_SENDER_PHONE").unwrap_or_default();
+            if !api_key.is_empty() {
+                let msg = format!("Update pesanan {}\nProduk: {}\nHarga: Rp{}\nStatus: {}", p.order_id, svc, price, status);
+                sent = rust_backend::domain::auth::service::send_whatsapp_message(&api_key, &sender, &phone, &msg).await.unwrap_or(false);
+            }
+        }
+    }
+    if sent {
+        Ok(Json(json!({ "result": true, "message": "Notifikasi WhatsApp terkirim" })))
+    } else {
+        Ok(Json(json!({ "result": false, "message": "Gateway WhatsApp tidak tersedia / nomor tidak ditemukan" })))
+    }
+}
+
+// ---------- Transaction detail ----------
+
+#[derive(Deserialize)]
+pub struct TransactionDetailQuery { pub order_id: String }
+
+async fn handle_admin_transaction_detail(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Query(q): Query<TransactionDetailQuery>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    require_admin(&state, &headers).await?;
+    use sqlx::Row;
+    let r = sqlx::query("SELECT * FROM transaction WHERE order_id = ? LIMIT 1")
+        .bind(&q.order_id).fetch_optional(&state.db).await?
+        .ok_or(AppError::ServiceNotFound)?;
+
+    let opt_s = |col: &str| -> String { r.try_get::<String, _>(col).unwrap_or_default() };
+    let opt_f = |col: &str| -> f64 { r.try_get::<f64, _>(col).unwrap_or(0.0) };
+    let dt = |col: &str| -> String {
+        r.try_get::<Option<chrono::NaiveDateTime>, _>(col).unwrap_or(None)
+            .map(|d| d.format("%Y-%m-%d %H:%M:%S").to_string()).unwrap_or_default()
+    };
+
+    Ok(Json(json!({
+        "result": true,
+        "data": {
+            "order_id": opt_s("order_id"),
+            "order_tid": opt_s("order_tid"),
+            "user": opt_s("user"),
+            "code": opt_s("code"),
+            "service_name": opt_s("service_name"),
+            "game": opt_s("game"),
+            "target": opt_s("target"),
+            "price": opt_f("price"),
+            "profit": opt_f("profit"),
+            "status": opt_s("status"),
+            "payment_status": opt_s("payment_status"),
+            "provider": opt_s("provider"),
+            "note": opt_s("note"),
+            "voucher": r.try_get::<String, _>("voucher").unwrap_or_default(),
+            "flashsale": r.try_get::<String, _>("flashsale").unwrap_or_default(),
+            "nickname": r.try_get::<String, _>("nickname").unwrap_or_default(),
+            "phone": r.try_get::<String, _>("phone").unwrap_or_default(),
+            "created_at": dt("created_at"),
+            "updated_at": dt("updated_at"),
+            "expired_at": dt("expired_at"),
+        }
+    })))
+}
+
+// ============================================================
+// PUBLIC: VOUCHER CHECK (parity with library/ajax/check-voucher.php)
+// ============================================================
+
+#[derive(Deserialize)]
+pub struct VoucherCheckRequest {
+    pub code: String,
+    #[serde(default)]
+    pub category: String,
+    #[serde(default)]
+    pub price: f64,
+    #[serde(default)]
+    pub service_code: String,
+}
+
+async fn handle_voucher_check(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(req): Json<VoucherCheckRequest>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    use sqlx::Row;
+    let ip = client_ip_from_headers(&headers);
+
+    // ANTI-BRUTEFORCE: batasi frekuensi cek voucher per-IP (10x/menit)
+    if !rate_limit(&format!("vchk:{}", ip), 10, 60) {
+        return Ok(Json(json!({ "result": false, "message": "Terlalu banyak percobaan. Coba lagi nanti." })));
+    }
+    // ANTI-PROBING: kode salah >5x dalam 10 menit → blokir sementara IP ini
+    if !record_failure(&format!("vfail:{}", ip), 5, 600) {
+        return Ok(Json(json!({ "result": false, "message": "Akses voucher dibatasi sementara karena terlalu banyak kode salah." })));
+    }
+
+    let code = req.code.trim().to_string();
+    if code.is_empty() {
+        return Ok(Json(json!({ "result": false, "message": "Kode voucher tidak boleh kosong." })));
+    }
+
+    let row = match sqlx::query("SELECT * FROM voucher WHERE voucher = ? LIMIT 1")
+        .bind(&code).fetch_optional(&state.db).await
+    {
+        Ok(r) => r,
+        Err(_) => return Ok(Json(json!({ "result": false, "message": "Fitur voucher tidak tersedia." }))),
+    };
+    let v = match row {
+        Some(v) => v,
+        None => return Ok(Json(json!({ "result": false, "message": "Kode voucher tidak valid." }))),
+    };
+
+    let stock: i64 = v.try_get("stock").unwrap_or(0);
+    if stock <= 0 {
+        return Ok(Json(json!({ "result": false, "message": "Stok voucher sudah habis." })));
+    }
+
+    let v_category: String = v.try_get("code").unwrap_or_default();
+    if !req.category.is_empty() && !v_category.is_empty() && v_category != req.category {
+        return Ok(Json(json!({ "result": false, "message": "Voucher tidak berlaku untuk produk ini." })));
+    }
+
+    // Exclusive with flashsale (parity with PHP)
+    if !req.service_code.is_empty() {
+        let on_flash: Option<(i64,)> = sqlx::query_as("SELECT id FROM flashsale WHERE code = ? AND status = '1' LIMIT 1")
+            .bind(&req.service_code).fetch_optional(&state.db).await.unwrap_or(None);
+        if on_flash.is_some() {
+            return Ok(Json(json!({ "result": false, "message": "Voucher tidak bisa digunakan untuk produk flashsale." })));
+        }
+    }
+
+    let minimum: f64 = v.try_get("minimum").unwrap_or(0.0);
+    if minimum > 0.0 && req.price > 0.0 && req.price < minimum {
+        return Ok(Json(json!({ "result": false, "message": format!("Minimum belanja Rp{} untuk memakai voucher ini.", minimum) })));
+    }
+
+    let discount: f64 = v.try_get("discount").unwrap_or(0.0);
+    // Voucher valid → hapus penalti kegagalan IP ini
+    reset_failures(&format!("vfail:{}", ip));
+    Ok(Json(json!({
+        "result": true,
+        "message": "Voucher valid!",
+        "data": { "code": code, "discount": discount, "minimum": minimum }
+    })))
+}
+
+// ============================================================
+// PUBLIC: DEPOSIT DETAIL (parity with app/guest/deposit/faktur.php)
+// ============================================================
+
+async fn handle_deposit_detail(
+    State(state): State<AppState>,
+    axum::extract::Path(did): axum::extract::Path<String>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    use sqlx::Row;
+    let row = sqlx::query("SELECT * FROM deposit WHERE deposit_id = ? LIMIT 1")
+        .bind(&did).fetch_optional(&state.db).await?
+        .ok_or(AppError::ServiceNotFound)?;
+
+    let action: String = row.try_get("action").unwrap_or_default();
+    let mtype: String = row.try_get("type").unwrap_or_default();
+    let provider: String = row.try_get("provider").unwrap_or_default();
+    let amount: f64 = row.try_get("amount").unwrap_or(0.0);
+    let fee: f64 = row.try_get("fee").unwrap_or(0.0);
+    let uniq: f64 = row.try_get("balance").unwrap_or(0.0);
+
+    let is_url = action.starts_with("http://") || action.starts_with("https://");
+    let payment_kind = if is_url {
+        "url"
+    } else if mtype == "virtual" {
+        "va"
+    } else if provider == "X" || mtype == "convenience" {
+        "guide"
+    } else {
+        "qr"
+    };
+
+    Ok(Json(json!({
+        "result": true,
+        "data": {
+            "deposit_id": row.try_get::<String, _>("deposit_id").unwrap_or_else(|_| did.clone()),
+            "username": row.try_get::<String, _>("username").unwrap_or_default(),
+            "method": row.try_get::<String, _>("name").unwrap_or_default(),
+            "method_code": row.try_get::<String, _>("method").unwrap_or_default(),
+            "type": mtype,
+            "provider": provider,
+            "amount": amount,
+            "fee": fee,
+            "uniq": uniq,
+            "total": amount + fee + uniq,
+            "status": row.try_get::<String, _>("status").unwrap_or_default(),
+            "payment_action": action,
+            "payment_kind": payment_kind,
+            "guide": row.try_get::<String, _>("note").unwrap_or_default(),
+            "date": row.try_get::<String, _>("date").unwrap_or_default(),
+            "expired": row.try_get::<String, _>("expired").unwrap_or_default(),
+        }
+    })))
+}
+
+// ============================================================
+// EXTERNAL API EXTENSIONS (profile + order, parity api/profile.php & api/order.php)
+// ============================================================
+
+fn url_decode_component(s: &str) -> String {
+    let plus_fixed = s.replace('+', " ");
+    let bytes = plus_fixed.as_bytes();
+    let mut out = Vec::with_capacity(bytes.len());
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'%' && i + 2 < bytes.len() {
+            if let Ok(b) = u8::from_str_radix(&plus_fixed[i + 1..i + 3], 16) {
+                out.push(b);
+                i += 3;
+                continue;
+            }
+        }
+        out.push(bytes[i]);
+        i += 1;
+    }
+    String::from_utf8_lossy(&out).to_string()
+}
+
+fn parse_form_body(body: &str) -> serde_json::Value {
+    let mut map = serde_json::Map::new();
+    for pair in body.split('&') {
+        if pair.is_empty() { continue; }
+        let mut it = pair.splitn(2, '=');
+        let k = url_decode_component(it.next().unwrap_or(""));
+        let v = url_decode_component(it.next().unwrap_or(""));
+        map.insert(k, json!(v));
+    }
+    serde_json::Value::Object(map)
+}
+
+#[derive(Deserialize)]
+pub struct ExternalProfileRequest { pub key: String, pub sign: String }
+
+async fn handle_external_profile(
+    State(state): State<AppState>,
+    Json(req): Json<ExternalProfileRequest>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    use sqlx::Row;
+    let api = verify_api_key(&state, &req.key, &req.sign).await?;
+    let username: String = api.try_get("user").unwrap_or_default();
+
+    let user = get_user_profile(&state.db, &username).await?;
+    Ok(Json(json!({
+        "result": true,
+        "data": {
+            "username": user.username,
+            "balance": user.balance,
+            "level": user.level,
+            "registered": user.date_cr.clone().unwrap_or_default(),
+        },
+        "message": "Akun ditemukan"
+    })))
+}
+
+async fn handle_external_order(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    body: String,
+) -> Result<Json<serde_json::Value>, AppError> {
+    // Accept both JSON and form-urlencoded bodies (PHP api accepted form-data)
+    let value: serde_json::Value = if body.trim_start().starts_with('{') {
+        serde_json::from_str(&body).unwrap_or(parse_form_body(&body))
+    } else {
+        parse_form_body(&body)
+    };
+    let payload: rust_backend::models::ApiOrderRequest = serde_json::from_value(value)
+        .map_err(|e| AppError::BadRequest(e.to_string()))?;
+
+    let client_ip = headers.get("x-forwarded-for")
+        .and_then(|h| h.to_str().ok())
+        .and_then(|v| v.split(',').next())
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .unwrap_or("127.0.0.1")
+        .to_string();
+
+    let res = rust_backend::domain::orders::engine::process_api_order(&state, &client_ip, payload).await?;
+    Ok(Json(serde_json::to_value(res).unwrap_or(json!({ "result": false }))))
 }
 
 async fn start_web_callback_listener(db: sqlx::MySqlPool) {
@@ -2601,6 +4526,18 @@ async fn start_web_callback_listener(db: sqlx::MySqlPool) {
     if bot_token.is_empty() || group_id.is_empty() {
         tracing::warn!("[WEB CALLBACK LISTENER] Telegram bot credentials missing. Background status callback listener skipped.");
         return;
+    }
+
+    // ANTI 409: token listener web TIDAK BOLEH sama dengan token listener
+    // fulfillment (TELEGRAM_BOT_2_TOKEN) — dua getUpdates identik saling
+    // merebut update (HTTP 409) dan pesan bisa hilang.
+    if let Ok(t2) = std::env::var("TELEGRAM_BOT_2_TOKEN") {
+        if !t2.is_empty() && t2 == bot_token {
+            tracing::error!(
+                "[CONFIG FATAL] Token listener Web SAMA dengan TELEGRAM_BOT_2_TOKEN (listener fulfillment). \
+                 Dua getUpdates dengan token yang sama akan bertabrakan (HTTP 409). WAJIB beda bot!"
+            );
+        }
     }
 
     tokio::spawn(async move {
@@ -2630,6 +4567,9 @@ async fn start_web_callback_listener(db: sqlx::MySqlPool) {
                             let order_id = parts[1];
                             let status = parts[2];
                             let note = if parts.len() >= 4 { parts[3].replace('_', " ") } else { String::new() };
+
+                            // ACK rekonsiliasi: fulfillment jelas sudah menerima notif bayar
+                            PENDING_PAID.remove(order_id);
 
                             let _ = sqlx::query("UPDATE transaction SET status = ?, note = ?, updated_at = NOW() WHERE order_id = ?")
                                 .bind(status)
@@ -2661,6 +4601,106 @@ async fn start_web_callback_listener(db: sqlx::MySqlPool) {
                                     tracing::info!("[WEB CALLBACK LISTENER] Refunded Rp{} to user {} on DB Web", amount, username);
                                 }
                             }
+                        } else if parts[0] == "[SYNC_PRICE]" && parts.len() >= 8 {
+                            // BOT 3: sinkronisasi harga layanan dari Server Topup (sumber kebenaran).
+                            // Web hanya mencerminkan; perhitungan akhir tetap di fulfillment.
+                            let code = parts[1];
+                            let name = parts[2].replace('_', " ");
+                            let price: f64 = parts[3].parse().unwrap_or(0.0);
+                            let member: f64 = parts[4].parse().unwrap_or(0.0);
+                            let reseller: f64 = parts[5].parse().unwrap_or(0.0);
+                            let provider = parts[6];
+                            let status = parts[7];
+
+                            let upd = sqlx::query("UPDATE service SET name = ?, price = ?, member = ?, reseller = ?, provider = ?, status = ?, date_up = NOW() WHERE code = ?")
+                                .bind(&name).bind(price).bind(member).bind(reseller).bind(provider).bind(status).bind(code)
+                                .execute(&db)
+                                .await;
+                            match upd {
+                                Ok(r) if r.rows_affected() == 0 => {
+                                    let _ = sqlx::query("INSERT INTO service (code, name, game, type, price, member, reseller, provider, status, date_up) VALUES (?, ?, '', 'games', ?, ?, ?, ?, ?, NOW())")
+                                        .bind(code).bind(&name).bind(price).bind(member).bind(reseller).bind(provider).bind(status)
+                                        .execute(&db)
+                                        .await;
+                                    tracing::info!("[WEB SYNC] Service {} baru dibuat di DB Web (harga Rp{})", code, price);
+                                }
+                                Ok(_) => tracing::debug!("[WEB SYNC] Service {} tersinkron (Rp{})", code, price),
+                                Err(e) => tracing::warn!("[WEB SYNC] Gagal sync service {}: {}", code, e),
+                            }
+                        } else if parts[0] == "[SYNC_FLASH]" && parts.len() >= 4 {
+                            let code = parts[1];
+                            let amount: f64 = parts[2].parse().unwrap_or(0.0);
+                            let status = parts[3];
+
+                            let res = sqlx::query("UPDATE flashsale SET amount = ?, status = ? WHERE code = ?")
+                                .bind(amount).bind(status).bind(code)
+                                .execute(&db)
+                                .await;
+                            if let Ok(r) = res {
+                                if r.rows_affected() == 0 {
+                                    let _ = sqlx::query("INSERT INTO flashsale (code, amount, status) VALUES (?, ?, ?)")
+                                        .bind(code).bind(amount).bind(status)
+                                        .execute(&db)
+                                        .await;
+                                }
+                                tracing::debug!("[WEB SYNC] Flashsale {} tersinkron (status {})", code, status);
+                            }
+                        } else if parts[0] == "[SYNC_VOUCHER]" && parts.len() >= 6 {
+                            let category_raw = parts[1];
+                            let category = if category_raw == "-" { String::new() } else { category_raw.replace('_', " ") };
+                            let voucher = parts[2];
+                            let discount: f64 = parts[3].parse().unwrap_or(0.0);
+                            let minimum: f64 = parts[4].parse().unwrap_or(0.0);
+                            let stock: i64 = parts[5].parse().unwrap_or(0);
+
+                            let res = sqlx::query("UPDATE voucher SET code = ?, discount = ?, minimum = ?, stock = ? WHERE voucher = ?")
+                                .bind(&category).bind(discount).bind(minimum).bind(stock).bind(voucher)
+                                .execute(&db)
+                                .await;
+                            if let Ok(r) = res {
+                                if r.rows_affected() == 0 {
+                                    let _ = sqlx::query("INSERT INTO voucher (code, voucher, discount, minimum, stock, date_cr) VALUES (?, ?, ?, ?, ?, NOW())")
+                                        .bind(&category).bind(voucher).bind(discount).bind(minimum).bind(stock)
+                                        .execute(&db)
+                                        .await;
+                                }
+                                tracing::debug!("[WEB SYNC] Voucher {} tersinkron (stok {})", voucher, stock);
+                            }
+                        } else if parts[0] == "[SYNC_USER]" && parts.len() >= 3 {
+                            // Level otoritatif dari Server Topup (web tidak menentukan level sendiri)
+                            let username = parts[1];
+                            let level = parts[2];
+                            let _ = sqlx::query("UPDATE users SET level = ? WHERE username = ?")
+                                .bind(level)
+                                .bind(username)
+                                .execute(&db)
+                                .await;
+                            tracing::debug!("[WEB SYNC] Level user {} → {}", username, level);
+                        } else if parts[0] == "[ORDER_ACCEPTED]" && parts.len() >= 3 {
+                            // Fulfillment MENERIMA order → kunci harga otoritatif.
+                            // Invoice gateway baru dibuat setelah state ini (oleh faktur polling).
+                            let order_id = parts[1];
+                            let price: f64 = parts[2].parse().unwrap_or(0.0);
+                            let _ = sqlx::query(
+                                "UPDATE transaction SET price = ?, note = 'ACCEPTED', updated_at = NOW() WHERE order_id = ? AND payment_status = 'unpaid'",
+                            )
+                            .bind(price)
+                            .bind(order_id)
+                            .execute(&db)
+                            .await;
+                            tracing::info!("[WEB CHECKOUT] Order {} ACCEPTED oleh Topup Server (harga final Rp{})", order_id, price);
+                        } else if parts[0] == "[ORDER_REJECTED]" && parts.len() >= 2 {
+                            // Fulfillment MENOLAK order → batalkan sebelum invoice dibuat
+                            let order_id = parts[1];
+                            let reason = if parts.len() >= 3 { parts[2].replace('_', " ") } else { "Tidak valid".to_string() };
+                            let _ = sqlx::query(
+                                "UPDATE transaction SET status = 'error', payment_status = 'cancel', note = ?, updated_at = NOW() WHERE order_id = ? AND payment_status = 'unpaid'",
+                            )
+                            .bind(format!("DITOLAK: {}", reason))
+                            .bind(order_id)
+                            .execute(&db)
+                            .await;
+                            tracing::warn!("[WEB CHECKOUT] Order {} REJECTED oleh Topup Server: {}", order_id, reason);
                         }
                     }
                 }

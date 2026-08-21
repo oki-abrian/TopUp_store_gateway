@@ -13,6 +13,10 @@ lazy_static::lazy_static! {
     static ref SENDER_TX: Mutex<Option<mpsc::UnboundedSender<String>>> = Mutex::new(None);
 }
 
+/// Backpressure: batas antrean memori agar flood tidak menghabiskan RAM.
+static QUEUE_LEN: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+const MAX_QUEUE_ITEMS: usize = 50_000;
+
 fn get_queue_sender() -> mpsc::UnboundedSender<String> {
     let mut lock = SENDER_TX.lock().unwrap();
     if let Some(ref tx) = *lock {
@@ -59,12 +63,39 @@ pub async fn init_telegram_sender() -> Result<(), String> {
 }
 
 async fn start_telegram_batch_worker(mut rx: mpsc::UnboundedReceiver<String>) {
-    tracing::info!("[TELEGRAM BATCH SENDER] Starting 6-second queue worker (max 10 cycles/min for Telegram limit safety)...");
-    let mut interval = tokio::time::interval(Duration::from_secs(6));
+    // Kuota Telegram ±20 call/menit per bot. Dengan 2 bot pengirim bergantian
+    // (round-robin) kapasitas menjadi ±40 call/menit → siklus 5 detik aman:
+    // 12 siklus/menit × 3 call (2 kirim + 1 hapus) = 36 ≤ 40.
+    tracing::info!("[TELEGRAM BATCH SENDER] Starting 5-second queue worker (dual-bot round-robin, ~40 calls/min budget)...");
+    let mut interval = tokio::time::interval(Duration::from_secs(5));
     let http_client = reqwest::Client::builder()
         .timeout(Duration::from_secs(10))
         .build()
         .unwrap_or_else(|_| reqwest::Client::new());
+
+    // Kumpulan bot pengirim: BOT_SENDER + BOT_4 (round-robin), fallback ke BOT/BOT_2.
+    let mut sender_tokens: Vec<String> = Vec::new();
+    for key in [
+        "TELEGRAM_BOT_SENDER_TOKEN",
+        "TELEGRAM_BOT_4_TOKEN",
+        "TELEGRAM_BOT_TOKEN",
+        "TELEGRAM_BOT_2_TOKEN",
+    ] {
+        if let Ok(t) = env::var(key) {
+            if !t.is_empty() && !sender_tokens.contains(&t) {
+                sender_tokens.push(t);
+            }
+        }
+    }
+    if sender_tokens.is_empty() {
+        tracing::warn!("[TELEGRAM BATCH SENDER] Tidak ada token bot pengirim. Worker idle.");
+        return;
+    }
+    let rr: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+    let next_token = |rr: &std::sync::atomic::AtomicUsize| -> String {
+        let i = rr.fetch_add(1, std::sync::atomic::Ordering::Relaxed) % sender_tokens.len();
+        sender_tokens[i].clone()
+    };
 
     loop {
         interval.tick().await;
@@ -76,6 +107,7 @@ async fn start_telegram_batch_worker(mut rx: mpsc::UnboundedReceiver<String>) {
                 break; // Maksimal 50 item per batch pengiriman
             }
         }
+        QUEUE_LEN.fetch_sub(batch.len(), std::sync::atomic::Ordering::Relaxed);
 
         if batch.is_empty() {
             continue;
@@ -99,27 +131,21 @@ async fn start_telegram_batch_worker(mut rx: mpsc::UnboundedReceiver<String>) {
             chunks.push(current_chunk);
         }
 
-        // Kirim menggunakan TELEGRAM_BOT_SENDER_TOKEN atau TELEGRAM_BOT_TOKEN atau TELEGRAM_BOT_2_TOKEN
-        let bot_token = env::var("TELEGRAM_BOT_SENDER_TOKEN")
-            .or_else(|_| env::var("TELEGRAM_BOT_TOKEN"))
-            .or_else(|_| env::var("TELEGRAM_BOT_2_TOKEN"))
-            .unwrap_or_default();
+        // Kirim bergantian antar bot pengirim (round-robin per chunk)
         let group_id = env::var("TELEGRAM_GROUP_2_ID").unwrap_or_default();
 
-        if bot_token.is_empty() || group_id.is_empty() {
-            tracing::warn!("[TELEGRAM BATCH SENDER] TELEGRAM_BOT_TOKEN or TELEGRAM_GROUP_2_ID is missing. Dropping batch.");
+        if sender_tokens.is_empty() || group_id.is_empty() {
+            tracing::warn!("[TELEGRAM BATCH SENDER] Token bot pengirim or TELEGRAM_GROUP_2_ID is missing. Dropping batch.");
             continue;
         }
-
-        let url = format!("https://api.telegram.org/bot{}/sendMessage", bot_token);
 
         let mut chunk_index = 0;
         let total_chunks = chunks.len();
 
         for chunk in chunks {
             if chunk_index > 0 {
-                // Beri jeda minimal 6 detik antar-chunk pengiriman agar tidak melebihi kuota Telegram
-                tokio::time::sleep(Duration::from_secs(6)).await;
+                // Jeda antar-chunk dalam satu siklus (5 detik = siklus aman)
+                tokio::time::sleep(Duration::from_secs(5)).await;
             }
             chunk_index += 1;
 
@@ -133,9 +159,13 @@ async fn start_telegram_batch_worker(mut rx: mpsc::UnboundedReceiver<String>) {
 
             let mut sent_successfully = false;
             for attempt in 1..=3 {
+                // Round-robin: tiap percobaan pakai bot berikutnya — kalau bot A kena
+                // limit, bot B langsung meneruskan tanpa menunggu retry_after penuh.
+                let bot_token = next_token(&rr);
+                let url = format!("https://api.telegram.org/bot{}/sendMessage", bot_token);
                 match http_client.post(&url).json(&payload).send().await {
                     Ok(resp) if resp.status().is_success() => {
-                        tracing::info!("[TELEGRAM BATCH SENDER] Successfully sent encrypted batch chunk of {} items to Telegram (chunk {}/{}).", chunk.len(), chunk_index, total_chunks);
+                        tracing::info!("[TELEGRAM BATCH SENDER] Batch terkirim via bot #{} (chunk {}/{}).", (attempt - 1) % sender_tokens.len() + 1, chunk_index, total_chunks);
                         sent_successfully = true;
                         break;
                     }
@@ -149,23 +179,23 @@ async fn start_telegram_batch_worker(mut rx: mpsc::UnboundedReceiver<String>) {
                                 val.get("parameters")
                                     .and_then(|p| p.get("retry_after"))
                                     .and_then(|r| r.as_u64())
-                                    .unwrap_or(6)
+                                    .unwrap_or(5)
                             } else {
-                                6
+                                5
                             }
                         } else {
-                            // Cycle-aligned backoff: kelipatan siklus aman Telegram (6s, 12s, 24s)
-                            6 * (1 << (attempt - 1))
+                            // Cycle-aligned backoff: kelipatan siklus aman (5s, 10s, 20s)
+                            5 * (1 << (attempt - 1))
                         };
 
                         tracing::warn!(
-                            "[TELEGRAM BATCH SENDER] Attempt {}/3 failed (Status: {}). Body: {}. Menunggu {} detik sebelum percobaan berikutnya...",
+                            "[TELEGRAM BATCH SENDER] Attempt {}/3 failed via bot (Status: {}). Body: {}. Menunggu {} detik sebelum percobaan berikutnya...",
                             attempt, status, err_body, retry_after_secs
                         );
                         tokio::time::sleep(Duration::from_secs(retry_after_secs)).await;
                     }
                     Err(e) => {
-                        let wait_secs = 6 * (1 << (attempt - 1)); // 6s, 12s, 24s
+                        let wait_secs = 5 * (1 << (attempt - 1)); // 5s, 10s, 20s
                         tracing::warn!(
                             "[TELEGRAM BATCH SENDER] Attempt {}/3 network/RTO error: {}. Menunggu {} detik sebelum percobaan berikutnya...",
                             attempt, e, wait_secs
@@ -181,6 +211,7 @@ async fn start_telegram_batch_worker(mut rx: mpsc::UnboundedReceiver<String>) {
                     chunk.len()
                 );
                 let queue = get_queue_sender();
+                QUEUE_LEN.fetch_add(chunk.len(), std::sync::atomic::Ordering::Relaxed);
                 for item in chunk {
                     let _ = queue.send(item);
                 }
@@ -196,12 +227,19 @@ pub async fn send_report_to_fulfillment(order_or_cmd: &str) -> Result<(), String
         format!("[REPORT] {}", order_or_cmd)
     };
 
-    // Masukkan ke antrean memori non-blocking (instan <1ms)
-    get_queue_sender()
-        .send(formatted)
-        .map_err(|e| format!("Failed to enqueue report: {}", e))?;
-
-    Ok(())
+    // Masukkan ke antrean memori non-blocking (instan <1ms), dengan batas backpressure
+    if QUEUE_LEN.load(std::sync::atomic::Ordering::Relaxed) >= MAX_QUEUE_ITEMS {
+        tracing::error!("[TELEGRAM BATCH SENDER] Antrean penuh ({} item). Pesan DITOLAK (backpressure): {}", MAX_QUEUE_ITEMS, order_or_cmd);
+        return Err("Telegram queue full — coba lagi nanti".to_string());
+    }
+    QUEUE_LEN.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    match get_queue_sender().send(formatted) {
+        Ok(_) => Ok(()),
+        Err(e) => {
+            QUEUE_LEN.fetch_sub(1, std::sync::atomic::Ordering::Relaxed);
+            Err(format!("Failed to enqueue report: {}", e))
+        }
+    }
 }
 
 

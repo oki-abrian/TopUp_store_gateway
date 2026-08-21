@@ -1,4 +1,5 @@
 use sqlx::MySqlPool;
+use sqlx::Row;
 use std::time::Duration;
 use tracing;
 
@@ -9,15 +10,31 @@ pub async fn start_expired_cleaner_task(db: MySqlPool) {
             interval.tick().await;
             tracing::info!("[CRON WORKER] Cleaning expired unpaid transactions & deposits...");
 
-            let res_trx = sqlx::query(
-                "UPDATE transaction SET status = 'error', payment_status = 'expired', note = 'Expired otomatis sistem' WHERE payment_status = 'unpaid' AND created_at < DATE_SUB(NOW(), INTERVAL 15 MINUTE)"
+            // Expire per-order (bukan bulk UPDATE) agar restock voucher tidak dobel:
+            // baris dipilih SEKALI lalu langsung ditandai expired pada order yang sama.
+            let stale = sqlx::query(
+                "SELECT order_id, COALESCE(voucher, '') AS voucher FROM transaction WHERE payment_status = 'unpaid' AND created_at < DATE_SUB(NOW(), INTERVAL 15 MINUTE)"
             )
-            .execute(&db)
-            .await;
+            .fetch_all(&db)
+            .await
+            .unwrap_or_default();
 
-            if let Ok(res) = res_trx {
-                if res.rows_affected() > 0 {
-                    tracing::info!("[CRON WORKER] Expired {} unpaid transactions.", res.rows_affected());
+            for row in stale {
+                let order_id: String = row.try_get("order_id").unwrap_or_default();
+                let voucher: String = row.try_get("voucher").unwrap_or_default();
+
+                // Guard idempoten: hanya transisi unpaid → expired yang diproses
+                let res = sqlx::query(
+                    "UPDATE transaction SET status = 'error', payment_status = 'expired', note = 'Expired otomatis sistem', updated_at = NOW() WHERE order_id = ? AND payment_status = 'unpaid'"
+                )
+                .bind(&order_id)
+                .execute(&db)
+                .await;
+
+                if let Ok(r) = res {
+                    if r.rows_affected() > 0 && !voucher.is_empty() {
+                        crate::domain::orders::pricing::restock_voucher(&db, &voucher).await;
+                    }
                 }
             }
 
