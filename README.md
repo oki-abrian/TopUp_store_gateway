@@ -1,136 +1,129 @@
 # 🛍️ TopUp Store Gateway (Server Web)
 
-[![Rust](https://img.shields.io/badge/Rust-1.75%2B-orange.svg)](https://www.rust-lang.org/)
-[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
+[![Rust](https://img.shields.io/badge/Rust-1.85%2B-orange.svg)](https://www.rust-lang.org/)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://gnu.org/licenses/agpl-3.0)
 [![Framework: Axum](https://img.shields.io/badge/Framework-Axum-purple.svg)](https://github.com/tokio-rs/axum)
 
-**TopUp Store Gateway** adalah server web *high-performance* berbasis Rust dan Axum untuk platform toko online topup game dan PPOB. Server ini bertindak sebagai **Server Web** yang mengelola antarmuka pengguna (CSR Frontend), katalog layanan game dinamis, pembuatan faktur pembayaran, autentikasi akun member, integrasi gateway pembayaran, serta verifikasi WhatsApp OTP.
+**TopUp Store Gateway** adalah server web *high-performance* berbasis Rust dan Axum untuk platform toko online topup game dan PPOB. Server ini mengelola antarmuka pengguna (CSR Frontend), katalog layanan game dinamis, autentikasi akun member, penerbitan faktur pembayaran, verifikasi WhatsApp OTP, serta API reseller.
+
+> ⚠️ **Repo ini HANYA Server Web.** Eksekusi topup dilakukan oleh proyek terpisah — **Fulfillment Service / Server Topup** (`fulfillment_backend`). Kedua proyek di-deploy di server yang berbeda.
 
 ---
 
-## 🏛️ Arsitektur Sistem (Zero-Trust Microservices)
+## 🏛️ Arsitektur Sistem (Zero-Trust Dual Database)
 
-Sistem ini beroperasi dengan arsitektur **100% Dual Database Terpisah (*Shared-Nothing*)**:
-- **Server Web (`TopUp_store_gateway`)**: Menangani antarmuka web publik, pengguna, penerbitan invoice, dan menerima Webhook (Tripay, Tokopay, Duitku, Paydisini) pada database lokalnya sendiri.
-- **Server Topup (`TopUp_fulfillment_service`)**: Beroperasi di server terpisah dengan *Zero-Inbound Port*, mengeksekusi pesanan ke supplier DigiFlazz, dan membaca mutasi bot.
-- **Komunikasi Antar-Server**: Dilakukan secara dua arah via **Telegram Bot Encrypted Queue (HMAC-SHA256)**.
+Sistem beroperasi dengan **100% dual database terpisah (*shared-nothing*)**:
+
+| Komponen | Peran | Port |
+|---|---|---|
+| **Server Web** (repo ini) | Website publik, user, invoice gateway, webhook pembayaran | HTTP terbuka |
+| **Server Topup** (`fulfillment_backend`) | Validasi harga & voucher otoritatif, eksekusi topup supplier | **Zero-inbound** (tanpa port) |
+| **Komunikasi** | Antrean Telegram terenkripsi dua arah (HMAC-SHA256 + anti-replay 120 detik) | — |
+
+### 🔒 Two-Phase Checkout (Web Tidak Dipercaya)
+
+Harga **TIDAK boleh dipercaya dari sisi web** — alur wajib:
+
+```
+submit order ──[NEW_ORDER]──▶ SERVER TOPUP hitung harga ASLI dari DB Topup
+                                    │
+            [ORDER_ACCEPTED] ◀──────┘  (harga resmi dikunci di web)
+                    │
+      faktur otomatis membuat tagihan gateway SETELAH ACC
+                    │
+            user bayar harga terverifikasi → webhook → topup
+```
+
+Order ditolak (`[ORDER_REJECTED]`)? Invoice **tidak pernah dibuat** — nol uang masuk, nol refund. Web diretas sekalipun tidak bisa underprice atau memalsukan kupon.
+
+### 🎟️ Pengamanan Voucher 3 Level
+1. **L1** — dedup per-batch Telegram: dari N pesanan identik (user+voucher), hanya yang pertama diproses.
+2. **L2** — validasi penuh di Server Topup: stok atomik, kategori, minimum belanja, eksklusif flashsale.
+3. **L3** — anti-replay: voucher yang masih tertaut transaksi aktif/sukses lain → diskon dicabut otomatis.
 
 ---
 
 ## 📱 Integrasi WhatsApp Gateway (OpenWA / MPWA)
 
-Server Web mendukung gateway WhatsApp untuk verifikasi pendaftaran (OTP), reset password, dan transaksi:
-
-### Pilihan A: Menggunakan OpenWA (Rekomendasi: 100% Gratis & Self-Hosted)
-Gunakan repository resmi [**rmyndharis/OpenWA**](https://github.com/rmyndharis/OpenWA):
-1. Jalankan OpenWA di VPS menggunakan Docker:
-   ```bash
-   git clone https://github.com/rmyndharis/OpenWA.git
-   cd OpenWA
-   docker compose up -d
-   ```
-2. Buka dashboard OpenWA di browser (`http://YOUR_VPS_IP:3000`), lalu scan QR Code nomor WhatsApp Anda.
-3. Hubungkan ke `.env` Server Web:
-   ```env
-   WA_GATEWAY_URL=http://127.0.0.1:3000/api/v1/send-message
-   MPWA_API_KEY=api_key_dari_dashboard_openwa
-   MPWA_SENDER_PHONE=default
-   ```
-
-### Pilihan B: Menggunakan MPWA Cloud
-```env
-WA_GATEWAY_URL=https://mpwa.byllann.com/send-message
-MPWA_API_KEY=your_mpwa_api_key
-MPWA_SENDER_PHONE=089667912348
-```
-
----
-
-## 🤖 Panduan Mendapatkan Telegram Bot Token & Group ID
-
-Jalur komunikasi terenkripsi antar-server menggunakan Bot Telegram:
-
-### 1. Cara Membuat Bot & Mendapatkan `Bot Token`:
-1. Buka aplikasi Telegram, cari bot resmi **`@BotFather`**.
-2. Kirim perintah `/newbot`.
-3. Masukkan nama bot (contoh: `Aruteru Report Bot`) dan username bot (contoh: `aruteru_report_bot`).
-4. `@BotFather` akan memberikan **Bot Token** (contoh: `7123456789:AAF_AbCdEfGhIjKlMnOpQrStUvWxYz12345`).
-
-### 2. Cara Membuat Grup & Mendapatkan `Group Chat ID`:
-1. Buat **Grup Baru** di Telegram dan undang bot Anda ke dalam grup tersebut.
-2. Jadikan bot sebagai **Admin Grup**.
-3. Masukkan bot pembantu **`@raw_data_bot`** ke grup, lalu catat ID grup yang muncul pada field `"chat": { "id": -100xxxxxxxxxx }`.
-4. Masukkan ID tersebut (lengkap dengan tanda minus `-100`) ke file `.env`.
-
----
-
-## ⚙️ Prasyarat Sistem & Dependensi
-
-- **Rust Toolchain**: `rustc` & `cargo` versi 1.75 atau lebih baru.
-- **Database**: MySQL 8.0+ atau MariaDB 10.5+ (Lokal untuk Server Web).
-- **Aset Web**: Folder `public/` (HTML, CSS, Vanilla JS, Gambar) yang sudah disertakan di repository.
-
----
-
-## 🚀 Panduan Konfigurasi & Menjalankan Server
-
-### 1. Konfigurasi Environment (`.env`)
-Salin file `.env.example` menjadi `.env`:
+### Pilihan A: OpenWA (Rekomendasi: Gratis & Self-Hosted)
+Gunakan [**rmyndharis/OpenWA**](https://github.com/rmyndharis/OpenWA):
 ```bash
-cp .env.example .env
+git clone https://github.com/rmyndharis/OpenWA.git && cd OpenWA
+docker compose up -d   # lalu scan QR Code di http://VPS_IP:3000
 ```
 
-Sesuaikan parameter `.env`:
+### Pilihan B: MPWA Cloud
+Langsung isi `WA_GATEWAY_URL=https://mpwa.byllann.com/send-message`.
+
+---
+
+## 🤖 Menyiapkan Bot Telegram & Group ID
+
+Komunikasi antar-server memakai beberapa bot sekaligus (pembagian kuota ±20 call/menit per bot):
+
+| Variabel | Fungsi |
+|---|---|
+| `TELEGRAM_BOT_SENDER_TOKEN` | Pengirim antrean batch utama (dari web ke topup) |
+| `TELEGRAM_BOT_4_TOKEN` | Pengirim kedua — round-robin, menggandakan kuota (siklus 5 detik aman) |
+| `TELEGRAM_CALLBACK_BOT_TOKEN` | Listener status di sisi web (**wajib beda bot dengan milik fulfillment**) |
+
+Cara membuat: **@BotFather → `/newbot`**, jadikan bot admin grup, ambil Chat ID via **@raw_data_bot** (format `-100xxxxxxxxxx`). Semua bot diletakkan di grup yang sama, tanpa anggota manusia.
+
+> 🚨 `TELEGRAM_ENCRYPTION_KEY` **wajib sama** dengan milik Server Topup. Dua listener tidak boleh memakai token bot yang sama (tabrakan getUpdates/HTTP 409).
+
+---
+
+## ⚙️ Prasyarat
+
+- Rust toolchain 1.85+
+- MySQL 8.0+ / MariaDB 10.5+ (database lokal web)
+- Folder `public/` (HTML/CSS/JS vanilla — sudah termasuk)
+
+## 🚀 Konfigurasi & Menjalankan
+
+```bash
+cp .env.example .env   # lalu sesuaikan
+```
+
 ```env
-# Server Web Configuration
 SERVER_PORT=8080
 SERVER_HOST=0.0.0.0
+DATABASE_URL=mysql://user:pass@localhost:3306/db_store_web
 
-# Database Web Lokal (MySQL)
-DATABASE_URL=mysql://db_user:db_password@localhost:3306/db_store_web
+# Payment Gateway (isi sesuai yang dipakai)
+TRIPAY_MERCHANT_CODE=...      TRIPAY_API_KEY=...       TRIPAY_PRIVATE_KEY=...
+TOKOPAY_MERCHANT_ID=...       TOKOPAY_SECRET_KEY=...
+DUITKU_MERCHANT_CODE=...      DUITKU_APIKEY=...
+PAYDISINI_API_KEY=...         PAYDISINI_MERCHANT_ID=...
 
-# Batas Hold Saldo Member
-HOLD_BALANCE_MEMBER=0
-HOLD_BALANCE_RESELLER=50000
-HOLD_BALANCE_ADMIN=100000
+# URL publik untuk callback webhook gateway
+PUBLIC_BASE_URL=https://domainanda.com
 
-# WhatsApp Gateway (OpenWA / MPWA)
-WA_GATEWAY_URL=http://127.0.0.1:3000/api/v1/send-message
-MPWA_API_KEY=your_wa_token
-MPWA_SENDER_PHONE=default
+# WhatsApp OTP
+WA_GATEWAY_URL=...
+MPWA_API_KEY=...
+MPWA_SENDER_PHONE=...
 
-# Payment Gateway Kredensial
-TRIPAY_MERCHANT_CODE=T1234
-TRIPAY_API_KEY=your_tripay_api_key
-TRIPAY_PRIVATE_KEY=your_tripay_private_key
-
-TOKOPAY_MERCHANT_ID=M1234
-TOKOPAY_SECRET_KEY=your_tokopay_secret
-
-DUITKU_MERCHANT_CODE=D1234
-DUITKU_API_KEY=your_duitku_api_key
-
-PAYDISINI_API_KEY=your_paydisini_key
-PAYDISINI_MERCHANT_ID=your_merchant_id
-
-# Komunikasi Terenkripsi ke Server Topup (Telegram)
-TELEGRAM_BOT_TOKEN=7123456789:AAF_AbCdEfGhIjKlMnOpQrStUvWxYz12345
-TELEGRAM_GROUP_2_ID=-1001234567890
-TELEGRAM_ENCRYPTION_KEY=ARUTERU_SECRET_KEY_SUPER_SECURE_2026
+# Telegram bus komunikasi
+TELEGRAM_BOT_SENDER_TOKEN=...
+TELEGRAM_BOT_4_TOKEN=...
+TELEGRAM_CALLBACK_BOT_TOKEN=...
+TELEGRAM_GROUP_2_ID=-100xxxxxxxxxx
+TELEGRAM_ENCRYPTION_KEY=kunci-rahasia-sama-dengan-server-topup
 ```
 
-### 2. Menjalankan Server
 ```bash
-# Mode Development
-cargo run --bin store_gateway
-
-# Mode Produksi (Optimasi Penuh)
 cargo run --bin store_gateway --release
 ```
 
-Server Web akan aktif di `http://0.0.0.0:8080` dan melayani seluruh request website beserta API-nya.
+Server aktif di `http://0.0.0.0:8080`.
 
 ---
 
+## 🔌 API Reseller
+
+`POST /api/v1/external/order` (auth: `ukey` + signature MD5 + IP whitelist) bersifat **dua fase**: respons langsung berstatus `pending`, topup dieksekusi Server Topup setelah validasi saldo & harga. Pantau hasilnya lewat endpoint status hingga `success`/`error`.
+
 ## 📄 Lisensi
-Proyek ini dilindungi di bawah lisensi **GNU AGPLv3 (Affero General Public License v3.0)**.
+
+Proyek ini dilindungi di bawah lisensi **GNU AGPLv3**.

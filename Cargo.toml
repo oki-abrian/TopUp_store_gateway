@@ -41,13 +41,7 @@ path = "src/main.rs"
 name = "store_gateway"
 path = "src/bin/store_gateway.rs"
 
-[[bin]]
-name = "fulfillment_service"
-path = "src/bin/fulfillment_service.rs"
-
-[[bin]]
-name = "fulfillment_cli"
-path = "src/bin/fulfillment_cli.rs"
+# Binari fulfillment pindah ke proyek fulfillment_backend
 
 
 

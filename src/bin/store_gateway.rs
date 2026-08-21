@@ -4554,7 +4554,7 @@ async fn start_web_callback_listener(db: sqlx::MySqlPool) {
                 }
                 if let Some(text) = msg.text() {
                     let decrypted = if text.starts_with("ENC:") {
-                        rust_backend::domain::telegram::report_bot::decrypt_telegram_payload(text).unwrap_or_default()
+                        rust_backend::domain::telegram::sender::decrypt_telegram_payload(text).unwrap_or_default()
                     } else {
                         text.to_string()
                     };

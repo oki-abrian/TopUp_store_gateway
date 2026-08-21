@@ -55,6 +55,44 @@ pub fn encrypt_telegram_payload(data: &str) -> String {
     format!("ENC:{}.{}", signature, base64_payload)
 }
 
+pub fn decrypt_telegram_payload(enc_str: &str) -> Result<String, String> {
+    let payload = enc_str.strip_prefix("ENC:").ok_or_else(|| "Not an encrypted payload".to_string())?;
+    let parts: Vec<&str> = payload.split('.').collect();
+    if parts.len() != 2 {
+        return Err("Invalid encrypted envelope format".to_string());
+    }
+
+    let signature_hex = parts[0];
+    let base64_payload = parts[1];
+
+    let key = get_encryption_key();
+    let mut mac = HmacSha256::new_from_slice(key.as_bytes()).map_err(|e| e.to_string())?;
+    mac.update(base64_payload.as_bytes());
+    let expected_sig = hex::encode(mac.finalize().into_bytes());
+
+    if !signature_hex.eq_ignore_ascii_case(&expected_sig) {
+        return Err("Cryptographic signature mismatch! Tampered or spoofed message.".to_string());
+    }
+
+    let decoded_bytes = BASE64_STANDARD.decode(base64_payload).map_err(|e| e.to_string())?;
+    let raw_payload = String::from_utf8(decoded_bytes).map_err(|e| e.to_string())?;
+
+    let elements: Vec<&str> = raw_payload.splitn(3, '|').collect();
+    if elements.len() < 3 {
+        return Err("Invalid payload structure".to_string());
+    }
+
+    let ts: i64 = elements[0].parse().map_err(|_| "Invalid timestamp in payload".to_string())?;
+    let now = chrono::Utc::now().timestamp();
+
+    // Anti-Replay: Tolak pesan yang lebih lama dari 120 detik
+    if (now - ts).abs() > 120 {
+        return Err(format!("Payload timestamp expired (Age: {}s). Possible Replay Attack blocked.", now - ts));
+    }
+
+    Ok(elements[2].to_string())
+}
+
 pub async fn init_telegram_sender() -> Result<(), String> {
     // Memastikan antrean worker aktif saat server startup
     let _ = get_queue_sender();
